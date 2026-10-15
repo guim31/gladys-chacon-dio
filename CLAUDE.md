@@ -5,11 +5,13 @@ contributors.
 
 ## What this is
 
-A Gladys Assistant **external integration**: a Node.js service (Node 22+, ESM,
-no build step) that runs in its own sandboxed Docker container and talks to
-Gladys through
+A Gladys Assistant **external integration** for the **Chacon DiO** Wi-Fi
+devices (DiO One app: shutters, light switches, plugs, video doorbell), through
+the DiO cloud. A Node.js service (Node 22+, ESM, no build step) that runs in its
+own sandboxed Docker container and talks to Gladys through
 [`@gladysassistant/integration-sdk`](https://github.com/GladysAssistant/integration-sdk-js),
-its only runtime dependency. It started from the official JavaScript template.
+its only runtime dependency (the DiO cloud is reached with Node's global
+`fetch` and `WebSocket`). It started from the official JavaScript template.
 
 ## Commands
 
@@ -31,16 +33,24 @@ pushing.
 ## Architecture
 
 ```
-index.js                          SDK wiring only: handlers registered before connect()
-src/devices/index.js              registry of the device blueprints + dispatch helpers
-src/devices/<type>.js             one device type per file (buildDevice, onPoll, onSetValue...)
-src/scenes.js                     scene action handlers (manifest `scene_actions`)
-src/widgets.js                    dashboard widget handlers (manifest `widgets`)
+index.js                          builds the logger, session store, DiO client, app; connects
+src/app.js                        the Gladys side: discovery, states, commands, pills, trigger,
+                                  widget and scene handlers, config changes, cloud events
+src/dio/protocol.js               the DiO cloud protocol as pure functions (types, links, requests)
+src/dio/client.js                 login, one WebSocket, requests/answers, pushed states, reconnection
+src/dio/session-store.js          the session token in /data/dio-session.json
+src/devices.js                    Gladys device and features per DiO kind, states, commands
+src/poller.js                     the container's own refresh timer (Gladys#3198), onPoll fallback
+src/widgets.js                    "DiO shutters" widget content (pure builders)
+src/scenes.js                     scene trigger keys and the `move_shutters` scene action
+src/i18n.js                       every text of the code, in en / fr / de / es
+src/issues.js                     repeated failures logged once (from gladys-subsonic)
 src/config.js                     DEFAULT_CONFIG (mirrors the manifest defaults) + normalization
-src/weather.js                    example driver (Open-Meteo)
+scripts/probe.mjs                 read-only probe of the real DiO cloud (fake or real account)
 gladys-assistant-integration.json manifest: name, config_schema, actions, image...
-docs/en.md, docs/fr.md            user documentation, re-hosted by Gladys (mandatory)
-test/                             node --test, against the SDK's fake Gladys (integration-sdk/testing)
+docs/{en,fr,de,es}.md             user documentation, re-hosted by Gladys, same sections
+test/                             node --test, against the SDK's fake Gladys and test/helpers/fakeDio.js
+test/fixtures/dio/                DiO cloud answers, hand-written from the documented captures
 .github/scripts/release.mjs       release helpers (manifest bump, changelog), tested in test/
 ```
 
@@ -70,8 +80,10 @@ test/                             node --test, against the SDK's fake Gladys (in
   `type: "provider"`: 5.1.0). `test/manifest.test.js` ties the manifest to the
   code (defaults, action, scene and widget handlers): change both sides
   together.
-- **User-facing text** is bilingual (English and French): action messages,
-  manifest texts, and `docs/en.md` / `docs/fr.md`, kept in sync.
+- **User-facing text** exists in four languages (English, French, German,
+  Spanish): action messages, manifest texts, feature names, widget texts, and
+  `docs/en.md`, `docs/fr.md`, `docs/de.md`, `docs/es.md`, kept in sync
+  (`test/i18n.test.js`). German says "du", Spanish says "usted".
 - **Style.** Prettier formats, ESLint catches mistakes. Comments explain why,
   in English. Tests never touch the network.
 
@@ -224,6 +236,51 @@ appliquée à ses 21 intégrations. `test/i18n.test.js` doit échouer sur une la
 long, et sur un « Sie »/« Ihr… » de politesse en allemand. Le store exige `docs/en.md` et `docs/fr.md`
 (`DOCS_LANGUAGES`) et publie aussi `docs/de.md` et `docs/es.md` quand ils existent
 (`DOCS_OPTIONAL_LANGUAGES` d'integration-store) : écrire les quatre, avec les mêmes sections.
+
+## Chacon DiO : l'API et ses pièges
+
+Faits établis en lisant `Protocol.md` et la description AsyncAPI de
+[cnico/dio-chacon-wifi-api](https://github.com/cnico/dio-chacon-wifi-api)
+(**GPL-3.0 : lue, jamais recopiée**) et l'intégration HA `chacon_dio`
+(Apache-2.0). **Rien n'a été vérifié sur le vrai cloud** : le proxy des sessions
+refuse `l4hfront-prod.chacon.cloud`. `npm run probe` le fait depuis une machine
+qui a le réseau (faux compte par défaut, vrai compte avec `DIO_EMAIL` /
+`DIO_PASSWORD`, sans rien afficher de sensible).
+
+- **Connexion** : `POST /api/session/login` `{ email, password, installationId }`
+  répond **HTTP 200 même en cas d'erreur**, le vrai statut est dans le corps
+  (`{"status":400,"data":"Invalid username/password."}`). Le jeton (`r:` + hex)
+  ouvre le WebSocket `wss://…/ws?sessionToken=…` ; le serveur répond
+  `{"name":"connection","action":"success"|"invalid"}`. Le cloud accepte aussi
+  e-mail et mot de passe **dans l'URL** du WebSocket : ne jamais s'en servir.
+- **Requêtes** : `{ method, path, parameters, id }`, réponse `{ id, status, data }`
+  (le `status` 200 dans le corps). La réponse au logout porte aussi un `name`.
+- **États** : `POST /device/states` rend, par appareil, `rc` (1 = connecté au
+  cloud) et des `links` OCF (`oic.r.openlevel`, `oic.r.movement.linear`,
+  `oic.r.switch.binary`, `gw.r.lastEvent`…). Un module au vieux firmware répond
+  `null` : le traiter comme hors ligne. Un `deviceState` poussé peut ne porter
+  **qu'un seul lien** : fusionner, ne jamais effacer les autres.
+- **Volets** : `openLevel` 100 = ouvert, 0 = fermé ; `movement` up / down /
+  stop. Dans Gladys : `shutter/position` 0-100 et `shutter/state` (1 / 0 / -1,
+  les boutons du front, qui surlignent la valeur publiée).
+- **Types** : `.wifi.shutter.`, `.wifi.genericSwitch.` (REV-LIGHT, publié en
+  `light/binary`), `.wifi.plug.`, `.wifi.doorBell.` (Tuya derrière le même
+  cloud). Les autres (ampoules, variateurs, caméras) ne sont pas documentés :
+  journalisés une fois et listés par l'action `list_devices`.
+- **Sonnette** : `gw.r.lastEvent` `{ type: "ring", ts }` ; une sonnerie = un `ts`
+  nouveau **et récent** (2 min), sinon une relecture après reconnexion rejouerait
+  un vieux coup de sonnette. Publiée en impulsion 1 puis 0 (`doorbell/ring`).
+- **Commandes** : accusé `{ id, status: 200 }` immédiat, puis l'état réel arrive
+  en `deviceState`. Sans push dans les 8 s, l'appareil est relu. Une lecture
+  partie **avant** la commande répond l'ancien état : seul un push compte comme
+  confirmation (`pushedAt`).
+- **Quotas** : aucun publié. Une session gardée dans `/data`, une requête par
+  relecture pour tous les appareils, reconnexion de 10 s à 10 min, et **aucune
+  nouvelle tentative après un mot de passe refusé** (risque de blocage du compte)
+  tant que la configuration n'est pas réenregistrée.
+- **Pièges de test** : `resolve(promesse)` adopte la promesse (l'ouverture du
+  socket rend `{ closed }`, pas `closed`) ; les minuteurs simulés de `node:test`
+  doivent aussi simuler `Date` pour le poller.
 
 ## Choix par défaut de Guilhem (12/10/2026)
 

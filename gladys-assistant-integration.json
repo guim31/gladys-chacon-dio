@@ -1,177 +1,388 @@
 {
   "manifest_version": 1,
   "type": "device",
-  "name": "Demo Devices Template",
+  "name": "Chacon DiO",
   "description": {
-    "en": "Starter template showing sensors, a switch, a dimmable light and a smart plug.",
-    "fr": "Template de démarrage : capteurs, interrupteur, lampe variable et prise connectée."
+    "en": "DiO (Chacon) shutters, plugs, light switches and doorbell, in real time through the DiO cloud.",
+    "fr": "Volets, prises, interrupteurs et sonnette DiO (Chacon), en temps réel via le cloud DiO.",
+    "de": "DiO-Rollläden, Steckdosen, Lichtschalter und Türklingel (Chacon), in Echtzeit über die DiO-Cloud.",
+    "es": "Persianas, enchufes, interruptores y timbre DiO (Chacon), en tiempo real con la nube DiO."
   },
   "version": "1.0.0",
-  "docker_image": "ghcr.io/gladysassistant/integration-template-js:1.0.0",
+  "docker_image": "ghcr.io/guim31/gladys-chacon-dio:1.0.0",
   "gladys_version": ">=5.1.0",
-  "cover_image": "https://raw.githubusercontent.com/GladysAssistant/integration-template-js/master/cover.png",
-  "categories": ["lighting", "security", "environment"],
-  "transports": ["local", "cloud"],
+  "cover_image": "https://raw.githubusercontent.com/guim31/gladys-chacon-dio/main/cover.png",
+  "categories": ["lighting", "appliances", "security"],
+  "transports": ["cloud"],
   "config_schema": [
     {
       "key": "intro",
       "type": "section",
-      "label": { "en": "Getting started", "fr": "Pour commencer" },
-      "description": {
-        "en": "The demo weather station reads real data from the free Open-Meteo API: pick the coordinates to observe. No account, no API key.",
-        "fr": "La station météo de démonstration lit de vraies données via l'API gratuite Open-Meteo : choisissez les coordonnées à observer. Pas de compte, pas de clé d'API."
+      "label": {
+        "en": "Your DiO account",
+        "fr": "Votre compte DiO",
+        "de": "Dein DiO-Konto",
+        "es": "Su cuenta DiO"
       },
-      "links": [
+      "description": {
+        "en": "The account of the DiO One app (Wi-Fi devices). Install and name the devices in the app first. Not affiliated with Chacon.",
+        "fr": "Le compte de l'application DiO One (appareils Wi-Fi). Installez et nommez d'abord les appareils dans l'application. Sans lien avec Chacon.",
+        "de": "Das Konto der App DiO One (WLAN-Geräte). Richte die Geräte zuerst in der App ein und benenne sie. Nicht mit Chacon verbunden.",
+        "es": "La cuenta de la aplicación DiO One (dispositivos wifi). Instale y nombre primero los dispositivos en la aplicación. Sin relación con Chacon."
+      }
+    },
+    {
+      "key": "email",
+      "type": "string",
+      "label": {
+        "en": "E-mail",
+        "fr": "E-mail",
+        "de": "E-Mail",
+        "es": "Correo electrónico"
+      },
+      "description": {
+        "en": "The e-mail you log in to the DiO One app with.",
+        "fr": "L'e-mail avec lequel vous vous connectez à l'application DiO One.",
+        "de": "Die E-Mail-Adresse, mit der du dich in der App DiO One anmeldest.",
+        "es": "El correo con el que inicia sesión en la aplicación DiO One."
+      },
+      "placeholder": {
+        "en": "e.g. name@example.com",
+        "fr": "ex. nom@exemple.fr",
+        "de": "z. B. name@beispiel.de",
+        "es": "p. ej. nombre@ejemplo.es"
+      },
+      "required": true,
+      "default": ""
+    },
+    {
+      "key": "password",
+      "type": "secret",
+      "label": {
+        "en": "Password",
+        "fr": "Mot de passe",
+        "de": "Passwort",
+        "es": "Contraseña"
+      },
+      "description": {
+        "en": "The password of the DiO One app. Only sent to the DiO cloud, to open a session.",
+        "fr": "Le mot de passe de l'application DiO One. Envoyé uniquement au cloud DiO, pour ouvrir une session.",
+        "de": "Das Passwort der App DiO One. Nur an die DiO-Cloud gesendet, um eine Sitzung zu öffnen.",
+        "es": "La contraseña de la aplicación DiO One. Solo se envía a la nube DiO, para abrir una sesión."
+      },
+      "required": true
+    },
+    {
+      "key": "refresh_minutes",
+      "type": "select",
+      "label": {
+        "en": "Safety refresh",
+        "fr": "Relecture de secours",
+        "de": "Sicherheitsabfrage",
+        "es": "Lectura de respaldo"
+      },
+      "description": {
+        "en": "Changes arrive in real time. As a safety net, every device is read again at this interval.",
+        "fr": "Les changements arrivent en temps réel. Par sécurité, tous les appareils sont relus à cet intervalle.",
+        "de": "Änderungen kommen in Echtzeit. Zur Sicherheit werden alle Geräte in diesem Abstand neu gelesen.",
+        "es": "Los cambios llegan en tiempo real. Por seguridad, todos los dispositivos se leen de nuevo con este intervalo."
+      },
+      "required": false,
+      "default": "5",
+      "options": [
         {
-          "url": "https://open-meteo.com/en/docs",
-          "label": { "en": "Open-Meteo documentation", "fr": "Documentation Open-Meteo" }
+          "value": "1",
+          "label": {
+            "en": "Every minute",
+            "fr": "Toutes les minutes",
+            "de": "Jede Minute",
+            "es": "Cada minuto"
+          }
+        },
+        {
+          "value": "5",
+          "label": {
+            "en": "Every 5 minutes",
+            "fr": "Toutes les 5 minutes",
+            "de": "Alle 5 Minuten",
+            "es": "Cada 5 minutos"
+          }
+        },
+        {
+          "value": "15",
+          "label": {
+            "en": "Every 15 minutes",
+            "fr": "Toutes les 15 minutes",
+            "de": "Alle 15 Minuten",
+            "es": "Cada 15 minutos"
+          }
+        },
+        {
+          "value": "30",
+          "label": {
+            "en": "Every 30 minutes",
+            "fr": "Toutes les 30 minutes",
+            "de": "Alle 30 Minuten",
+            "es": "Cada 30 minutos"
+          }
         }
       ]
     },
     {
-      "key": "latitude",
-      "type": "number",
-      "label": { "en": "Latitude", "fr": "Latitude" },
-      "description": {
-        "en": "Latitude used for the demo weather sensor.",
-        "fr": "Latitude utilisée par le capteur météo de démonstration."
-      },
-      "placeholder": { "en": "e.g. 48.8566", "fr": "ex. 48.8566" },
-      "required": true,
-      "default": 48.8566,
-      "min": -90,
-      "max": 90
-    },
-    {
-      "key": "longitude",
-      "type": "number",
-      "label": { "en": "Longitude", "fr": "Longitude" },
-      "description": {
-        "en": "Longitude used for the demo weather sensor.",
-        "fr": "Longitude utilisée par le capteur météo de démonstration."
-      },
-      "placeholder": { "en": "e.g. 2.3522", "fr": "ex. 2.3522" },
-      "required": true,
-      "default": 2.3522,
-      "min": -180,
-      "max": 180
-    },
-    {
-      "key": "unit",
+      "key": "language",
       "type": "select",
-      "label": { "en": "Temperature unit", "fr": "Unité de température" },
-      "required": false,
-      "default": "celsius",
-      "options": [
-        { "value": "celsius", "label": { "en": "Celsius", "fr": "Celsius" } },
-        { "value": "fahrenheit", "label": { "en": "Fahrenheit", "fr": "Fahrenheit" } }
-      ]
-    },
-    {
-      "key": "poll_frequency",
-      "type": "number",
-      "label": { "en": "Refresh interval (s)", "fr": "Intervalle de rafraîchissement (s)" },
+      "label": {
+        "en": "Language of the feature names",
+        "fr": "Langue des noms de fonctionnalités",
+        "de": "Sprache der Funktionsnamen",
+        "es": "Idioma de los nombres de funciones"
+      },
       "description": {
-        "en": "How often sensors are polled, in seconds (one minute minimum).",
-        "fr": "Fréquence d'interrogation des capteurs, en secondes (une minute minimum)."
+        "en": "Used for the features of the devices added from now on.",
+        "fr": "Utilisée pour les fonctionnalités des appareils ajoutés à partir de maintenant.",
+        "de": "Gilt für die Funktionen der ab jetzt hinzugefügten Geräte.",
+        "es": "Se usa para las funciones de los dispositivos añadidos a partir de ahora."
       },
       "required": false,
-      "default": 300,
-      "min": 60,
-      "max": 3600
+      "default": "fr",
+      "options": [
+        {
+          "value": "en",
+          "label": { "en": "English", "fr": "Anglais", "de": "Englisch", "es": "Inglés" }
+        },
+        {
+          "value": "fr",
+          "label": { "en": "French", "fr": "Français", "de": "Französisch", "es": "Francés" }
+        },
+        {
+          "value": "de",
+          "label": { "en": "German", "fr": "Allemand", "de": "Deutsch", "es": "Alemán" }
+        },
+        {
+          "value": "es",
+          "label": { "en": "Spanish", "fr": "Espagnol", "de": "Spanisch", "es": "Español" }
+        }
+      ]
     }
   ],
   "actions": [
     {
-      "key": "test_weather",
-      "label": { "en": "Test the weather provider", "fr": "Tester le fournisseur météo" },
-      "timeout_seconds": 30
-    },
-    {
-      "key": "identify",
-      "label": { "en": "Identify a device", "fr": "Identifier un appareil" },
-      "fields": [
-        {
-          "key": "device",
-          "type": "select",
-          "source": "devices",
-          "label": { "en": "Device", "fr": "Appareil" },
-          "required": true
-        }
-      ]
+      "key": "list_devices",
+      "label": {
+        "en": "List the devices of the DiO account",
+        "fr": "Lister les appareils du compte DiO",
+        "de": "Geräte des DiO-Kontos auflisten",
+        "es": "Listar los dispositivos de la cuenta DiO"
+      },
+      "description": {
+        "en": "Every device of the account, the ones not supported yet included, with their model.",
+        "fr": "Tous les appareils du compte, y compris ceux pas encore pris en charge, avec leur modèle.",
+        "de": "Alle Geräte des Kontos, auch die noch nicht unterstützten, mit ihrem Modell.",
+        "es": "Todos los dispositivos de la cuenta, incluidos los aún no compatibles, con su modelo."
+      },
+      "timeout_seconds": 20
     }
   ],
   "scene_triggers": [
     {
-      "key": "motion_detected",
-      "label": { "en": "Motion detected", "fr": "Mouvement détecté" },
+      "key": "device_connection_changed",
+      "label": {
+        "en": "DiO device offline or back online",
+        "fr": "Appareil DiO hors ligne ou de retour",
+        "de": "DiO-Gerät offline oder wieder online",
+        "es": "Dispositivo DiO sin conexión o de vuelta"
+      },
       "description": {
-        "en": "A demo motion sensor saw a person or an animal move.",
-        "fr": "Un détecteur de démonstration a vu bouger une personne ou un animal."
+        "en": "The DiO cloud lost or found a device: Wi-Fi down, power cut, unplugged plug.",
+        "fr": "Le cloud DiO perd ou retrouve un appareil : Wi-Fi coupé, coupure de courant, prise débranchée.",
+        "de": "Die DiO-Cloud verliert oder findet ein Gerät: WLAN weg, Stromausfall, Stecker gezogen.",
+        "es": "La nube DiO pierde o recupera un dispositivo: wifi caído, corte de luz, enchufe desconectado."
       },
       "fields": [
         {
           "key": "device",
           "type": "select",
           "source": "devices",
-          "label": { "en": "Sensor", "fr": "Détecteur" }
+          "label": {
+            "en": "Device",
+            "fr": "Appareil",
+            "de": "Gerät",
+            "es": "Dispositivo"
+          }
         },
         {
-          "key": "target",
-          "type": "multi_select",
-          "label": { "en": "What moved", "fr": "Ce qui a bougé" },
+          "key": "state",
+          "type": "select",
+          "label": {
+            "en": "Change",
+            "fr": "Changement",
+            "de": "Änderung",
+            "es": "Cambio"
+          },
           "options": [
-            { "value": "person", "label": { "en": "Person", "fr": "Personne" } },
-            { "value": "animal", "label": { "en": "Animal", "fr": "Animal" } }
+            {
+              "value": "offline",
+              "label": {
+                "en": "Goes offline",
+                "fr": "Passe hors ligne",
+                "de": "Geht offline",
+                "es": "Se desconecta"
+              }
+            },
+            {
+              "value": "online",
+              "label": {
+                "en": "Back online",
+                "fr": "Revient en ligne",
+                "de": "Wieder online",
+                "es": "Vuelve a conectarse"
+              }
+            }
           ]
         }
       ],
       "variables": [
         {
-          "key": "target",
+          "key": "device_name",
           "type": "string",
-          "label": { "en": "What moved", "fr": "Ce qui a bougé" }
+          "label": {
+            "en": "Device name",
+            "fr": "Nom de l'appareil",
+            "de": "Gerätename",
+            "es": "Nombre del dispositivo"
+          }
+        },
+        {
+          "key": "state",
+          "type": "string",
+          "label": {
+            "en": "Change (offline / online)",
+            "fr": "Changement (offline / online)",
+            "de": "Änderung (offline / online)",
+            "es": "Cambio (offline / online)"
+          }
         }
       ]
     }
   ],
   "scene_actions": [
     {
-      "key": "identify_device",
-      "label": { "en": "Identify a device", "fr": "Identifier un appareil" },
-      "description": {
-        "en": "Make a device signal itself (the demo light blinks).",
-        "fr": "Fait se signaler un appareil (la lampe de démonstration clignote)."
+      "key": "move_shutters",
+      "label": {
+        "en": "Move all DiO shutters",
+        "fr": "Commander tous les volets DiO",
+        "de": "Alle DiO-Rollläden steuern",
+        "es": "Mover todas las persianas DiO"
       },
-      "timeout_seconds": 15,
+      "description": {
+        "en": "Open, close, stop or position every DiO shutter added to Gladys, at once.",
+        "fr": "Ouvre, ferme, arrête ou positionne d'un coup tous les volets DiO ajoutés à Gladys.",
+        "de": "Öffnet, schließt, stoppt oder positioniert alle in Gladys hinzugefügten DiO-Rollläden auf einmal.",
+        "es": "Abre, cierra, detiene o coloca de una vez todas las persianas DiO añadidas a Gladys."
+      },
+      "timeout_seconds": 30,
       "fields": [
         {
-          "key": "device",
+          "key": "command",
           "type": "select",
-          "source": "devices",
-          "label": { "en": "Device", "fr": "Appareil" },
-          "required": true
+          "label": {
+            "en": "Command",
+            "fr": "Commande",
+            "de": "Befehl",
+            "es": "Orden"
+          },
+          "required": true,
+          "options": [
+            {
+              "value": "open",
+              "label": { "en": "Open", "fr": "Ouvrir", "de": "Öffnen", "es": "Abrir" }
+            },
+            {
+              "value": "close",
+              "label": { "en": "Close", "fr": "Fermer", "de": "Schließen", "es": "Cerrar" }
+            },
+            {
+              "value": "stop",
+              "label": { "en": "Stop", "fr": "Arrêter", "de": "Stoppen", "es": "Detener" }
+            },
+            {
+              "value": "position",
+              "label": {
+                "en": "Go to a position",
+                "fr": "Aller à une position",
+                "de": "Position anfahren",
+                "es": "Ir a una posición"
+              }
+            }
+          ]
+        },
+        {
+          "key": "position",
+          "type": "number",
+          "label": {
+            "en": "Position (%)",
+            "fr": "Position (%)",
+            "de": "Position (%)",
+            "es": "Posición (%)"
+          },
+          "description": {
+            "en": "Only for \"Go to a position\": 0 = closed, 100 = open.",
+            "fr": "Seulement pour « Aller à une position » : 0 = fermé, 100 = ouvert.",
+            "de": "Nur für „Position anfahren“: 0 = geschlossen, 100 = offen.",
+            "es": "Solo para «Ir a una posición»: 0 = cerrada, 100 = abierta."
+          },
+          "placeholder": {
+            "en": "e.g. 50",
+            "fr": "ex. 50",
+            "de": "z. B. 50",
+            "es": "p. ej. 50"
+          },
+          "required": false,
+          "min": 0,
+          "max": 100
         }
       ],
       "outputs": [
         {
-          "key": "signalled",
-          "type": "boolean",
-          "label": { "en": "Device signalled", "fr": "Appareil signalé" }
+          "key": "commanded",
+          "type": "number",
+          "label": {
+            "en": "Shutters commanded",
+            "fr": "Volets commandés",
+            "de": "Angesteuerte Rollläden",
+            "es": "Persianas accionadas"
+          }
+        },
+        {
+          "key": "failed",
+          "type": "number",
+          "label": {
+            "en": "Shutters failed",
+            "fr": "Volets en échec",
+            "de": "Fehlgeschlagene Rollläden",
+            "es": "Persianas con error"
+          }
         }
       ]
     }
   ],
   "widgets": [
     {
-      "key": "demo_status",
-      "label": { "en": "Demo status", "fr": "État de la démo" },
-      "description": {
-        "en": "Live temperature and plug power, plug connection and observed location.",
-        "fr": "Température et puissance en direct, connexion de la prise, position observée."
+      "key": "shutters",
+      "label": {
+        "en": "DiO shutters",
+        "fr": "Volets DiO",
+        "de": "DiO-Rollläden",
+        "es": "Persianas DiO"
       },
-      "icon": "activity",
-      "action_timeout_seconds": 15
+      "description": {
+        "en": "Every DiO shutter at a glance, open, stop or close them all.",
+        "fr": "Tous les volets DiO d'un coup d'œil ; tout ouvrir, arrêter ou fermer.",
+        "de": "Alle DiO-Rollläden auf einen Blick; alle öffnen, stoppen oder schließen.",
+        "es": "Todas las persianas DiO de un vistazo; abrir, detener o cerrar todas."
+      },
+      "icon": "sliders",
+      "action_timeout_seconds": 30
     }
   ]
 }
