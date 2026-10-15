@@ -8,8 +8,8 @@
     "de": "DiO-Rollläden, Steckdosen, Lichtschalter und Türklingel (Chacon), in Echtzeit über die DiO-Cloud.",
     "es": "Persianas, enchufes, interruptores y timbre DiO (Chacon), en tiempo real con la nube DiO."
   },
-  "version": "1.0.0",
-  "docker_image": "ghcr.io/guim31/gladys-chacon-dio:1.0.0",
+  "version": "1.0.1",
+  "docker_image": "ghcr.io/guim31/gladys-chacon-dio:1.0.1",
   "gladys_version": ">=5.1.0",
   "cover_image": "https://raw.githubusercontent.com/guim31/gladys-chacon-dio/main/cover.png",
   "categories": ["lighting", "appliances", "security"],

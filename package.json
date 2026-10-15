@@ -1,6 +1,6 @@
 {
   "name": "gladys-chacon-dio",
-  "version": "1.0.0",
+  "version": "1.0.1",
   "private": true,
   "description": "Gladys Assistant integration for the DiO (Chacon) Wi-Fi devices: shutters, plugs, light switches and doorbell, through the DiO cloud.",
   "type": "module",

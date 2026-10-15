@@ -10,6 +10,8 @@ the notes of the version's GitHub Release.
 
 ## [Unreleased]
 
+## [1.0.1] - 2026-10-15
+
 ### Changed
 
 - Garage doors and gates driven by a DiO shutter module are read-only by
@@ -37,3 +39,6 @@ the notes of the version's GitHub Release.
 - The session is kept in `/data` and reused across restarts: the password only
   travels when needed, and a refused password is never retried in a loop.
 - English, French, German and Spanish everywhere, documentation included.
+
+[Unreleased]: https://github.com/guim31/gladys-chacon-dio/compare/v1.0.1...HEAD
+[1.0.1]: https://github.com/guim31/gladys-chacon-dio/releases/tag/v1.0.1
