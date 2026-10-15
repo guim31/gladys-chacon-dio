@@ -1,61 +1,161 @@
-# Demo Devices Template
+# Chacon DiO
 
-This is the user documentation of the integration. Gladys re-hosts this file
-and shows a permanent **Documentation** link to it in the Configuration screen
-(in the user's language, with English as the fallback) — it is when
-configuring that the user needs it most. Keep the short onboarding hints in
-the `section` blocks of the manifest `config_schema`; put the long
-step-by-step (screenshots, troubleshooting…) here.
+Control from Gladys the **DiO** Wi-Fi devices by Chacon, the ones you set up
+with the **DiO One** app: roller shutters, plugs, light switches and the video
+doorbell. Changes arrive in real time, whether they come from Gladys, the DiO
+app, a wall switch or a remote.
 
-## What you get
+> **Developed without the hardware: feedback welcome.** This integration was
+> written from the DiO cloud protocol as publicly documented, and tested on
+> recorded answers, not on real devices. If something does not behave as
+> described here, say so on the [Gladys forum](https://community.gladysassistant.com)
+> or in the [issues](https://github.com/guim31/gladys-chacon-dio/issues).
 
-Six demo devices show up after installation: a weather station (real data
-from Open-Meteo), a switch, a dimmable light, a smart plug with power
-metering, a motion sensor and a camera.
+Community integration, **not affiliated with Chacon**. DiO and Chacon are
+trademarks of their owners.
+
+## Requirements
+
+- Gladys Assistant 5.1.0 or later.
+- A **DiO One** account (the app of the DiO Wi-Fi devices), with your devices
+  already installed and named in the app. Gladys uses those names.
+- An Internet connection: the integration goes through Chacon's cloud, like the
+  app. Without Internet, Gladys can neither read nor control your DiO devices.
+
+The older DiO **433 MHz** devices (remotes, plugs and modules without Wi-Fi,
+driven by the DiO 1.0 hub) do not go through this cloud: they are not covered.
 
 ## Configuration
 
-1. Open the **Configuration** tab of the integration.
-2. Set the **latitude** and **longitude** the demo weather station should
-   observe (they default to Paris), and pick your temperature unit.
-   The **refresh interval** sets how often the weather station and the
-   plug's power are read: every 5 minutes by default, every minute at most.
-3. Save: the devices appear in the **Discovery** tab, ready to be added.
+1. Install the integration from the Gladys catalog.
+2. In **Configuration**, enter the **e-mail** and the **password** of your DiO
+   One account, then save.
+3. The connection status shows at the top of the screen: "Connected" once the
+   DiO cloud accepted the account.
+4. Open the **Discovery** tab: your DiO devices are listed there. Add the ones
+   you want in Gladys, and put them in their rooms.
 
-The **Prefer the local connection** toggle drives the demo plug: it reports
-the channel it actually uses as a badge (local or cloud), with an orange dot
-when it runs degraded (local refused, cloud fallback).
+The other settings:
 
-## Actions
+- **Safety refresh**: changes arrive in real time, but as a safety net every
+  added device is read again at this interval (every 5 minutes by default).
+  One request reads every device.
+- **Language of the feature names**: "Position", "Movement", "Plug"… in the
+  chosen language (French by default). It applies to the devices added after
+  the change: Gladys fixes the names when a device is added.
 
-- **Test the weather provider** — performs a live request to Open-Meteo and
-  shows the current temperature and humidity under the button.
-- **Identify a device** — pick one of your devices in the list and it will
-  signal itself (the demo light "blinks" in the logs).
+The **List the devices of the DiO account** button shows everything your
+account holds, the devices the integration does not support yet included, with
+their model and type.
 
-## Scenes
+## Devices
 
-The integration adds its own cards to the scene editor (Gladys 5.1 or
-later), under the **Integrations** category:
+Each DiO device becomes a Gladys device, with the name you gave it in the DiO
+One app.
 
-- **Motion detected** (trigger) — starts the scene when a demo motion sensor
-  sees something move. Optionally pick the sensor and what moved (person,
-  animal); left empty, any detection matches. The following actions can
-  read what moved with `{{triggerEvent.data.target}}`.
-- **Identify a device** (action) — makes the chosen device signal itself.
-  It returns whether the device could signal itself, so the following
-  actions can depend on it.
+| DiO device                                   | In Gladys                                                                                                                                          |
+| -------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Roller shutter (REV-SHUTTER module, CERSwd…) | **Position** from 0 % (closed) to 100 % (open), and **Movement**: Open / Stop / Close buttons, which also show whether the shutter goes up or down |
+| Light switch (REV-LIGHT)                     | **Light** on / off                                                                                                                                 |
+| Smart plug                                   | **Plug** on / off                                                                                                                                  |
+| Video doorbell                               | **Ring**: "Ringing" for a few seconds at each ring, then the time of the last one                                                                  |
 
-## Dashboard
+Each device also carries a **cloud** pill, which turns **unreachable** when the
+DiO cloud sees the device offline (Wi-Fi down, breaker off, plug unplugged) or
+when the cloud itself does not answer.
 
-Add the **Demo status** widget to a dashboard: it shows the live
-temperature of the weather station and the power of the office plug, the
-connection the plug currently uses (orange when degraded) and the observed
-location. Its **Identify the light** button makes the demo light signal
-itself.
+Dimmers, bulbs and cameras are not supported yet: their protocol is not
+documented. They show in the report of the **List the devices of the DiO
+account** button; send us their line so they can be added.
+
+## Widget
+
+The **DiO shutters** dashboard widget shows all your DiO shutters added to
+Gladys at a glance: open, closed, at 45 %, opening, closing, offline. Three
+buttons command every shutter at once: **Open all**, **Stop all**, **Close
+all**. It is the equivalent of the groups of the DiO app.
+
+To add it: edit your dashboard, add a widget and pick **DiO shutters**. It has
+no setting.
+
+## Scene trigger and action
+
+**Trigger "DiO device offline or back online"**: fires when the DiO cloud loses
+a device or finds it again. You can narrow it to one device and one direction
+("Goes offline" or "Back online"). The variables `device_name` (name of the
+device) and `state` (`offline` or `online`) are available in the next actions,
+in a message for instance.
+
+**Action "Move all DiO shutters"**: opens, closes, stops or sends to a position
+(0 to 100 %) every DiO shutter added to Gladys, at once. It returns two values:
+`commanded` (shutters commanded) and `failed` (shutters that failed). If no
+shutter could be commanded, the action fails and the scene notes it in its
+history.
+
+For a single shutter, plug or light, use the usual Gladys actions ("Set device
+value", "Turn On the Lights", "Turn On the Switches"…).
+
+## Scene examples
+
+- **Close everything in the evening**: trigger "Every sunset", action "Move all
+  DiO shutters" with the **Close** command.
+- **The freezer lost power**: trigger "DiO device offline or back online" on the
+  freezer plug, change "Goes offline", then a message: "The plug
+  {{device_name}} no longer answers: power cut?".
+- **Someone rings at the gate**: trigger "Device state change" on the Ring of
+  the doorbell, "If the doorbell rings", then "Turn On the Lights" of the
+  entrance and "Send Message".
+- **The Christmas tree**: "Every sunset", "Turn On the Switches" on the plug of
+  the tree; at 11 pm, "Turn Off the Switches".
+
+## The DiO cloud: traffic and terms
+
+The integration uses the same service as the DiO One app. Chacon publishes
+neither documentation nor quota for this service: the integration stays
+frugal.
+
+- **One connection**: a single session is opened, then kept in the `/data`
+  folder of the integration and reused across restarts. The password is only
+  sent when the session has to be opened again.
+- **One request per safety refresh** for every device (every 5 minutes by
+  default), one request per command, and a small check request when the
+  connection has been silent for 4 minutes.
+- **Growing reconnection delay**: after a cut, a new attempt after 10 s, then
+  30 s, 1 min, 2 min, 5 min, and at most every 10 minutes.
+- **Password refused**: the integration stops there and waits for you to save
+  the configuration. It does not retry in a loop, which could lock your
+  account.
+
+Your e-mail and password are only used to open the session with Chacon's cloud;
+they never show in the logs.
 
 ## Troubleshooting
 
-The integration logs everything it does: check the integration logs from the
-Gladys UI (or `docker logs` on the host) with `LOG_LEVEL=debug` for the full
-detail.
+- **"DiO refused the e-mail or the password"**: check them by logging in to the
+  DiO One app, fix them in the configuration, then save. Saving, even without
+  any change, starts the connection again.
+- **"DiO cloud unreachable"**: your Gladys has no Internet, or Chacon's service
+  is down. The integration retries on its own.
+- **A device is missing from Discovery**: click **List the devices of the DiO
+  account**. If it shows with "not supported yet", it is not handled yet; if it
+  does not show, it is not on this account (a device shared by another account
+  only shows in the account that installed it).
+- **A device stays "unreachable"**: the DiO cloud sees it offline. Check in the
+  DiO One app: if it is offline there too, it is its Wi-Fi or its power.
+- **A shutter does not reach the right position**: the position comes from the
+  calibration of the module. Calibrate it again in the DiO One app.
+- For more detail, set the log level to debug (`LOG_LEVEL=debug` variable):
+  every read and every message received is described.
+
+## Limits
+
+- Everything goes through Chacon's cloud: without Internet, or if Chacon
+  changes its service, the integration stops working. No local control of the
+  DiO Wi-Fi devices is known.
+- Shutters, light switches, plugs and the doorbell only. No dimmer, bulb,
+  camera or schedule (the schedules made in the DiO app keep working).
+- Device names are taken when the device is added to Gladys: renaming a device
+  in the DiO app does not rename it in Gladys.
+- The doorbell gives neither picture nor video in Gladys, only the ring.
+- A garage door or a gate wired to a shutter module is seen as a shutter: do not
+  automate its opening without thinking about what a mistake would cause.

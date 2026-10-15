@@ -1,0 +1,97 @@
+{
+  "id": 3,
+  "status": 200,
+  "data": {
+    "L4HActuator_0a1b2c3d4e5f60718293a4b5": {
+      "rt": "oic.d.blind",
+      "href": "/v1/devices/L4HActuator_0a1b2c3d4e5f60718293a4b5",
+      "provider": "L4HActuator",
+      "rc": 1,
+      "t": 0,
+      "di": "L4HActuator_0a1b2c3d4e5f60718293a4b5",
+      "n": "CERSwd-3B_0A1B2C",
+      "links": [
+        { "rt": "oic.wk.p", "href": "platform", "mnmn": "Chacon", "mnmo": "CERSwd-3B" },
+        {
+          "rt": "oic.r.movement.linear",
+          "href": "mvtlinear",
+          "movement": "stop",
+          "movementSettings": ["stop", "up", "down"]
+        },
+        { "rt": "oic.r.openlevel", "href": "openlevel", "openLevel": 75 },
+        {
+          "rt": "gw.r.shutter.calibration",
+          "href": "shuttercalibration",
+          "up_ms": 10683,
+          "down_ms": 10370,
+          "direction": 0,
+          "reset": false,
+          "door": false
+        },
+        { "rt": "gw.r.schedule", "href": "schedule", "maxSchedules": 8, "sun": 1, "schedules": [] },
+        { "rt": "gw.r.dio1.switch", "href": "dio1_switch", "value": 0 },
+        { "rt": "gw.r.dio1.paired", "href": "dio1paired", "paired": [] }
+      ]
+    },
+    "L4HActuator_1b2c3d4e5f60718293a4b5c6": null,
+    "L4HActuator_2c3d4e5f60718293a4b5c6d7": {
+      "rt": "oic.d.switch",
+      "href": "/v1/devices/L4HActuator_2c3d4e5f60718293a4b5c6d7",
+      "provider": "L4HActuator",
+      "rc": 1,
+      "t": 0,
+      "di": "L4HActuator_2c3d4e5f60718293a4b5c6d7",
+      "n": "CERNwd-3B_2C3D4E",
+      "links": [
+        { "rt": "oic.wk.p", "href": "platform", "mnmn": "Chacon", "mnmo": "CERNwd-3B" },
+        { "rt": "oic.r.switch.binary", "href": "switch", "value": 1 },
+        { "rt": "gw.r.schedule", "href": "schedule", "maxSchedules": 8, "sun": 1, "schedules": [] },
+        { "rt": "gw.r.dio1.paired", "href": "dio1paired", "paired": [] }
+      ]
+    },
+    "L4HActuator_3d4e5f60718293a4b5c6d7e8": {
+      "rt": "oic.d.switch",
+      "href": "/v1/devices/L4HActuator_3d4e5f60718293a4b5c6d7e8",
+      "provider": "L4HActuator",
+      "rc": 1,
+      "t": 0,
+      "di": "L4HActuator_3d4e5f60718293a4b5c6d7e8",
+      "n": "PLUG_3D4E5F",
+      "links": [
+        { "rt": "oic.wk.p", "href": "platform", "mnmn": "Chacon" },
+        { "rt": "oic.r.switch.binary", "href": "switch", "value": 0 },
+        { "rt": "gw.r.quietmode", "href": "quietmode", "value": 0 },
+        { "rt": "gw.r.schedule", "href": "schedule", "maxSchedules": 8, "sun": 1, "schedules": [] },
+        { "rt": "gw.r.dio1.paired", "href": "dio1paired", "paired": [] }
+      ]
+    },
+    "Tuya_bf00112233445566778899": {
+      "rt": "oic.d.videoDoorbell",
+      "provider": "Tuya",
+      "rc": 1,
+      "di": "Tuya_bf00112233445566778899",
+      "links": [
+        {
+          "rt": "gw.r.camera.sdcard",
+          "href": "sdcard",
+          "total": "0G",
+          "free": "0G",
+          "status": "noCard"
+        },
+        {
+          "rt": "gw.r.camera.streamQuality",
+          "href": "streamQuality",
+          "isHD": true,
+          "isReadOnly": true
+        },
+        {
+          "rt": "gw.r.lastEvent",
+          "href": "lastEvent",
+          "type": "ring",
+          "ts": "2026-05-22T08:20:08.667Z",
+          "data": { "reason": null, "image": "https://example.com/doorbell/1779438008590.jpeg" }
+        }
+      ]
+    }
+  }
+}

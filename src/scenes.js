@@ -1,41 +1,49 @@
 // -----------------------------------------------------------------------------
-// Scene actions (SDK v0.14+, Gladys 5.1+).
+// Scene triggers and actions (Gladys 5.1+). Keys are forever once published.
 //
-// A scene action is an OPERATION a scene author places in a scene, with
-// parameters and a result: "identify this device", "take a snapshot", "clean
-// these rooms". Each one is declared in the manifest `scene_actions` field
-// (key, label, `fields` in the config_schema grammar, scalar `outputs`) and
-// handled here, keyed by that same `key`; index.js registers every entry with
-// `gladys.onSceneAction(key, ...)`.
-//
-// Scene TRIGGERS are the other direction ("this happened"): they are fired by
-// the device that observes the event, see src/devices/motionSensor.js.
-//
-// The rules that matter:
-//   - `fields` arrive RESOLVED: scene variables substituted, defaults applied,
-//     validated by the core; a `"source": "devices"` field is the chosen
-//     device external_id;
-//   - resolve an object of the declared `outputs` (scalars only), readable by
-//     the following actions of the scene, or `undefined` for none. Keys not
-//     declared in the manifest are dropped by the core;
-//   - throwing fails THIS action only: the scene logs it and continues. A
-//     scene action is never a condition: return an output and let the scene
-//     author gate on it;
-//   - never fire a scene event as a consequence of a received action: a scene
-//     bound to that event would loop through the integration.
+// - Trigger `device_connection_changed`: a DiO device lost or found its link
+//   to the cloud (Wi-Fi, power cut). Nothing else in Gladys says it: the
+//   features keep their last value. "The freezer plug went offline" is the
+//   scene it is for.
+// - Action `move_shutters`: open, close, stop or set the position of every
+//   DiO shutter added to Gladys, at once — the "group" of the DiO app. Gladys'
+//   own scene actions control one shutter at a time.
 // -----------------------------------------------------------------------------
 
-import { createLogger } from '@gladysassistant/integration-sdk';
-import { signalDevice } from './devices/index.js';
+export const TRIGGER = {
+  CONNECTION_CHANGED: 'device_connection_changed',
+};
 
-const logger = createLogger({ name: 'scenes' });
+export const SCENE_TRIGGER_KEYS = Object.values(TRIGGER);
 
+export const CONNECTION = { OFFLINE: 'offline', ONLINE: 'online' };
+
+export const SHUTTER_COMMANDS = ['open', 'close', 'stop', 'position'];
+
+/**
+ * The scene action handlers, by key. Each receives the app (src/app.js) and
+ * the resolved fields, and returns the declared outputs.
+ */
 export const SCENE_ACTIONS = {
-  // The ack is awaited under the action's `timeout_seconds` (15 s in the
-  // manifest), counted from the moment the scene reaches the action.
-  async identify_device(gladys, { fields, config }) {
-    logger.info(`Scene action identify_device <- ${fields.device}`);
-    const signalled = await signalDevice(gladys, fields.device, config);
-    return { signalled };
+  async move_shutters(app, fields) {
+    const command = fields?.command;
+    if (!SHUTTER_COMMANDS.includes(command)) {
+      throw new Error(`Unknown command "${command}"`);
+    }
+    let position;
+    if (command === 'position') {
+      position = Number(fields.position);
+      if (fields.position === undefined || fields.position === null || fields.position === '') {
+        throw new Error('The position is required with the "position" command');
+      }
+      if (!Number.isFinite(position) || position < 0 || position > 100) {
+        throw new Error(`Position out of range: ${fields.position}`);
+      }
+    }
+    const { commanded, failed } = await app.moveShutters(command, position, 'scene');
+    if (commanded === 0 && failed > 0) {
+      throw new Error(`No shutter could be commanded (${failed} failed)`);
+    }
+    return { commanded, failed };
   },
 };

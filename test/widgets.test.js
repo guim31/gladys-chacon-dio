@@ -1,77 +1,96 @@
+// -----------------------------------------------------------------------------
+// The "DiO shutters" widget: its content fits the core's vocabulary and budget
+// in every case (validateWidgetContent: [] means rendered exactly as sent),
+// and its buttons command every shutter added to Gladys.
+// -----------------------------------------------------------------------------
+
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { validateWidgetContent } from '@gladysassistant/integration-sdk';
-import { createFakeGladys } from '@gladysassistant/integration-sdk/testing';
-import { buildDiscoveredDevices } from '../src/devices/index.js';
-import { simulateLanSession } from '../src/devices/plug.js';
-import { DEMO_STATUS_WIDGET, WIDGETS, refreshWidgets } from '../src/widgets.js';
-import { normalizeConfig } from '../src/config.js';
+import { buildShuttersContent, describeShutter } from '../src/widgets.js';
+import { LANGS } from '../src/i18n.js';
+import { createWorld, until } from './helpers/world.js';
 
-const gladys = createFakeGladys();
-const config = normalizeConfig();
-const demoStatus = WIDGETS[DEMO_STATUS_WIDGET];
+const SALON = 'L4HActuator_0a1b2c3d4e5f60718293a4b5';
 
-// What the SDK passes to onWidgetGet, plus the config index.js adds.
-const getContent = (cfg = config) =>
-  demoStatus.get(gladys, { settings: {}, language: 'en', units: 'metric', config: cfg });
-
-test('the demo_status content is rendered exactly as sent', async () => {
-  // [] = nothing the core would drop, truncate or trim to the content budget.
-  assert.deepEqual(validateWidgetContent(await getContent()), []);
-});
-
-test('the degraded plug connection content is valid too', async () => {
-  simulateLanSession(false);
-  try {
-    const content = await getContent();
-    assert.deepEqual(validateWidgetContent(content), []);
-    const status = content.components.find((component) => component.type === 'status');
-    assert.ok(
-      status.items.some((item) => item.color === 'warning'),
-      'degraded shows a warning',
-    );
-  } finally {
-    simulateLanSession(true);
+test('every content fits the widget vocabulary and budget, in every language', () => {
+  const many = Array.from({ length: 14 }, (_, index) => ({
+    name: `Volet ${String(index).padStart(2, '0')} avec un nom vraiment très très long`,
+    state: { connected: true, position: index * 7, movement: 'stop' },
+  }));
+  for (const language of LANGS) {
+    for (const options of [
+      { configured: false, online: false, shutters: [] },
+      { configured: true, online: true, shutters: [] },
+      { configured: true, online: true, shutters: many },
+      { configured: true, online: false, shutters: many },
+    ]) {
+      const content = buildShuttersContent({ ...options, language });
+      assert.deepEqual(
+        validateWidgetContent(content),
+        [],
+        `${language} ${JSON.stringify(options).slice(0, 60)}`,
+      );
+    }
   }
+  const content = buildShuttersContent({
+    configured: true,
+    online: true,
+    shutters: many,
+    language: 'fr',
+  });
+  assert.equal(content.components.find((c) => c.type === 'status').items.length, 10);
+  // Offline cloud: no button that could not work.
+  const offline = buildShuttersContent({
+    configured: true,
+    online: false,
+    shutters: many,
+    language: 'fr',
+  });
+  assert.ok(!offline.components.some((c) => c.type === 'button'));
 });
 
-test('the live tiles reference features the integration publishes', async () => {
-  const featureIds = new Set(
-    buildDiscoveredDevices(gladys, config).flatMap((device) =>
-      device.features.map((feature) => feature.external_id),
-    ),
+test('a shutter reads as open, closed, a position, moving or offline', () => {
+  const read = (state) => describeShutter(state, 'fr').value;
+  assert.equal(read({ connected: true, position: 100, movement: 'stop' }), 'Ouvert');
+  assert.equal(read({ connected: true, position: 0, movement: 'stop' }), 'Fermé');
+  assert.equal(read({ connected: true, position: 45, movement: 'stop' }), '45 %');
+  assert.equal(read({ connected: true, position: 45, movement: 'up' }), 'Monte');
+  assert.equal(read({ connected: true, position: 45, movement: 'down' }), 'Descend');
+  assert.equal(read({ connected: false, position: 45 }), 'Hors ligne');
+  assert.equal(read(undefined), 'Inconnu');
+});
+
+test('the widget lists the shutters added to Gladys, and its buttons move them all', async (t) => {
+  const world = await createWorld();
+  t.after(() => world.stop());
+  const fake = world.gladys.fake;
+  const ack = await fake.widgetGet('shutters', { settings: {}, language: 'fr', units: {} });
+  assert.equal(ack.success, true);
+  const { content } = ack.data;
+  assert.deepEqual(validateWidgetContent(content), []);
+  const rows = content.components.find((c) => c.type === 'status').items;
+  assert.deepEqual(
+    rows.map((row) => [row.label, row.value]),
+    [
+      ['Volet chambre', 'Hors ligne'],
+      ['Volet salon', '75 %'],
+    ],
   );
-  const liveTiles = (await getContent()).components.filter((c) => c.device_feature);
-  assert.ok(liveTiles.length > 0, 'the template demonstrates a device-bound tile');
-  for (const tile of liveTiles) {
-    assert.ok(featureIds.has(tile.device_feature), `unknown feature ${tile.device_feature}`);
-  }
-});
 
-test('every button action of the content is handled and answers a short toast', async () => {
-  const buttons = (await getContent()).components.filter((c) => c.type === 'button' && c.action);
-  assert.ok(buttons.length > 0, 'the template demonstrates a widget action');
-  for (const { action } of buttons) {
-    const message = await demoStatus.action(gladys, {
-      actionKey: action.key,
-      params: action.params ?? {},
-      settings: {},
-      config,
-    });
-    assert.ok(message.en, 'the toast carries at least the mandatory `en` text');
-    assert.ok(message.en.length <= 200, 'toasts are capped at 200 characters');
-  }
-});
-
-test('an unknown widget action fails, so the user sees the error', async () => {
-  await assert.rejects(
-    demoStatus.action(gladys, { actionKey: 'unknown', params: {}, settings: {}, config }),
-    /Unknown widget action/,
+  const result = await fake.widgetAction('shutters', 'close_all', {}, { settings: {} });
+  assert.equal(result.success, true);
+  // The module that does not answer fails, the other one moves.
+  const toast = result.data.message ?? result.data;
+  assert.equal(toast.fr, '1 volet(s) commandé(s), 1 en échec.');
+  const moves = world.dio.requests.filter((r) => r.path.endsWith('/action/mvtlinear'));
+  assert.deepEqual(
+    moves.map((r) => [r.path, r.parameters.movement]),
+    [
+      [`/device/${SALON}/action/mvtlinear`, 'down'],
+      ['/device/L4HActuator_1b2c3d4e5f60718293a4b5c6/action/mvtlinear', 'down'],
+    ],
   );
-});
-
-test('refreshWidgets nudges every widget', () => {
-  const fresh = createFakeGladys();
-  refreshWidgets(fresh);
-  assert.deepEqual(fresh.fake.widgetRefreshes, Object.keys(WIDGETS));
+  // A shutter state change nudges the open dashboards.
+  await until(() => fake.widgetRefreshes.includes('shutters'));
 });
