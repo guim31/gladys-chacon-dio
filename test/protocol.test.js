@@ -61,6 +61,7 @@ test('the device states parse from the links', async () => {
     connected: true,
     movement: 'stop',
     position: 75,
+    door: false,
   });
   // A module with an old firmware answers null: offline, like the DiO app shows it.
   assert.deepEqual(state('L4HActuator_1b2c3d4e5f60718293a4b5c6'), { connected: false });
@@ -79,6 +80,9 @@ test('a partial or odd link list never invents a value', () => {
   assert.deepEqual(parseLinks([{ rt: 'oic.r.movement.linear', movement: 'sideways' }]), {});
   assert.deepEqual(parseLinks([{ rt: 'oic.r.switch.binary', value: 2 }]), {});
   assert.deepEqual(parseLinks([null, 'x', { rt: 'gw.r.quietmode', value: 1 }]), {});
+  // The calibration says whether the module drives a garage door or a gate.
+  assert.deepEqual(parseLinks([{ rt: 'gw.r.shutter.calibration', door: true }]), { door: true });
+  assert.deepEqual(parseLinks([{ rt: 'gw.r.shutter.calibration', door: 1 }]), {});
   assert.deepEqual(parseLinks(undefined), {});
 });
 

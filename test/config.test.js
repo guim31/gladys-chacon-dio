@@ -7,6 +7,7 @@ test('the defaults: French names, a safety refresh every 5 minutes', () => {
     email: '',
     password: '',
     refreshMs: 5 * 60 * 1000,
+    allowDoorControl: false,
     language: 'fr',
   });
   assert.equal(DEFAULT_CONFIG.language, 'fr');
@@ -33,4 +34,11 @@ test('credentials: both needed, the e-mail compared without case', () => {
   const a = normalizeConfig({ email: 'A@b.c', password: 'x' });
   assert.equal(sameCredentials(a, normalizeConfig({ email: 'a@B.c', password: 'x' })), true);
   assert.equal(sameCredentials(a, normalizeConfig({ email: 'a@b.c', password: 'y' })), false);
+});
+
+test('the control of garage doors and gates is off unless explicitly on', () => {
+  assert.equal(normalizeConfig({}).allowDoorControl, false);
+  assert.equal(normalizeConfig({ allow_door_control: 'yes' }).allowDoorControl, false);
+  assert.equal(normalizeConfig({ allow_door_control: true }).allowDoorControl, true);
+  assert.equal(normalizeConfig({ allow_door_control: 'true' }).allowDoorControl, true);
 });

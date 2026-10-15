@@ -44,6 +44,8 @@ Los demás ajustes:
 - **Lectura de respaldo**: los cambios llegan en tiempo real, pero por
   seguridad todos los dispositivos añadidos se leen de nuevo con este intervalo
   (cada 5 minutos por defecto). Una sola petición lee todos los dispositivos.
+- **Permitir el control de puertas de garaje y verjas**: desactivado por
+  defecto. Consulte «Puertas de garaje y verjas» más abajo.
 - **Idioma de los nombres de funciones**: «Posición», «Movimiento»,
   «Enchufe»… en el idioma elegido (francés por defecto). Se aplica a los
   dispositivos añadidos después del cambio: Gladys fija los nombres al añadir
@@ -72,6 +74,26 @@ saltado, enchufe desconectado) o cuando la propia nube no responde.
 Los reguladores, bombillas y cámaras aún no son compatibles: su protocolo no
 está documentado. Aparecen en el informe del botón **Listar los dispositivos de
 la cuenta DiO**; envíenos su línea para que se añadan.
+
+### Puertas de garaje y verjas
+
+Un módulo de persiana DiO también puede motorizar una puerta de garaje o una
+verja. Abrirla a distancia es como abrir una puerta con llave: por defecto,
+estos dispositivos son **de solo lectura**. Gladys muestra su posición pero
+rechaza cualquier orden, y ni el widget ni la acción «Mover todas las persianas
+DiO» los tocan.
+
+La integración los reconoce por la calibración del módulo, cuando indica una
+puerta, o por su nombre en la aplicación DiO One: «garaje», «verja»,
+«cancela», «portón», «gate», «portail»… Una persiana de puerta de balcón no
+está afectada. Para que un dispositivo se trate como una puerta, ponga una de
+esas palabras en su nombre en la aplicación y vuelva a buscar en la pestaña
+Descubrimiento.
+
+Para controlarlos de todos modos, active **Permitir el control de puertas de
+garaje y verjas** y aplique la actualización que propone la pestaña
+Descubrimiento. En Gladys siguen siendo persianas, nunca interruptores, y
+siguen excluidos del widget y de la acción «todas las persianas».
 
 ## Widget
 
@@ -166,6 +188,6 @@ Chacon; nunca aparecen en los registros.
 - Los nombres de los dispositivos se toman al añadirlos a Gladys: cambiar el
   nombre de un dispositivo en la aplicación DiO no lo cambia en Gladys.
 - El timbre no da ni imagen ni vídeo en Gladys, solo el timbrazo.
-- Una puerta de garaje o una verja conectada a un módulo de persiana se ve como
-  una persiana: no automatice su apertura sin pensar en lo que provocaría un
-  error.
+- Una puerta de garaje o una verja se reconoce por la calibración del módulo o
+  por su nombre: un nombre sin ninguna palabra reveladora pasa por una persiana.
+  Compruebe que aparece de solo lectura una vez añadida.

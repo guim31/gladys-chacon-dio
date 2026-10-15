@@ -22,6 +22,7 @@ import {
   FEATURE,
   buildDevice,
   commandFor,
+  isDoor,
   parseDeviceExternalId,
   parseFeatureExternalId,
   statesOf,
@@ -79,6 +80,7 @@ export function createApp({
   /** When the ring pulse of a doorbell ends, by DiO id. */
   const pulseEnds = new Map();
   const unsupportedLogged = new Set();
+  const doorsLogged = new Set();
   const pendingTimers = new Set();
   let widgetTimer = null;
   let widgetLastAt = 0;
@@ -103,6 +105,9 @@ export function createApp({
   };
 
   const idsOf = (dio) => gladys.externalIds(dio.kind, dio.id);
+
+  const doorOf = (dio) => isDoor(dio, states.get(dio.id));
+  const lockedDoor = (dio) => doorOf(dio) && !config?.allowDoorControl;
 
   /** The supported DiO devices the user added to Gladys. */
   function createdDevices() {
@@ -177,13 +182,29 @@ export function createApp({
   function discoveredDevices() {
     return [...devices.values()]
       .filter((dio) => dio.kind)
-      .map((dio) => buildDevice(gladys, dio, config.language));
+      .map((dio) => buildDevice(gladys, dio, config.language, { readOnly: lockedDoor(dio) }));
   }
 
   /** Read the device list of the account and publish it to Gladys. */
   async function syncDevices() {
     const list = await client.listDevices();
     devices = new Map(list.map((dio) => [dio.id, dio]));
+    // The calibration of a shutter module says whether it drives a garage
+    // door or a gate: known before the device is offered to the user.
+    // Throws when unread, rather than offer a door as a shutter.
+    const shutterIds = list.filter((dio) => dio.kind === KIND.SHUTTER).map((dio) => dio.id);
+    for (const [id, state] of await client.readStates(shutterIds)) {
+      states.set(id, { ...states.get(id), ...state });
+    }
+    for (const dio of list) {
+      if (doorOf(dio) && !doorsLogged.has(dio.id)) {
+        doorsLogged.add(dio.id);
+        logger.info(
+          `"${dio.name}" is a garage door or a gate: ` +
+            (config.allowDoorControl ? 'control allowed' : 'read-only'),
+        );
+      }
+    }
     for (const dio of list) {
       if (!dio.kind && !unsupportedLogged.has(dio.type)) {
         unsupportedLogged.add(dio.type);
@@ -209,10 +230,19 @@ export function createApp({
       return;
     }
     const previous = states.get(id);
+    const wasDoor = doorOf(dio);
     // When the cloud last pushed a state: a read in flight when a command is
     // sent answers with the state from before it, a push comes after.
     const merged = { ...previous, ...incoming, ...(pushed ? { pushedAt: now() } : {}) };
     states.set(id, merged);
+    if (doorOf(dio) !== wasDoor) {
+      // The module changed its mind (recalibrated as a door, or back): the
+      // Discovery tab offers the update.
+      logger.info(`"${dio.name}" is ${wasDoor ? 'no longer' : 'now'} a garage door or a gate`);
+      await gladys.publishDiscoveredDevices(discoveredDevices()).catch((err) => {
+        logger.error(`Publishing the DiO devices failed (${err.message})`);
+      });
+    }
     if (!created.has(idsOf(dio).device)) {
       return;
     }
@@ -368,6 +398,12 @@ export function createApp({
       throw new Error(`Unknown DiO device for ${feature.external_id}`);
     }
     const command = commandFor(target, value);
+    if (lockedDoor(dio)) {
+      // Also for a device added before it was known as a door, still writable
+      // in Gladys until the user applies the update of the Discovery tab.
+      logger.info(`Command refused: "${dio.name}" is a garage door or a gate`);
+      throw new Error('Garage door or gate: control is disabled in the integration configuration');
+    }
     if (!client.online) {
       throw new Error('Not connected to the DiO cloud');
     }
@@ -382,7 +418,9 @@ export function createApp({
    * @param {string} origin for the log line
    */
   async function moveShutters(command, position, origin) {
-    const shutters = createdDevices().filter((dio) => dio.kind === KIND.SHUTTER);
+    // Never the garage doors and gates, even when their control is allowed:
+    // "open all the shutters" must not open the house.
+    const shutters = createdDevices().filter((dio) => dio.kind === KIND.SHUTTER && !doorOf(dio));
     if (shutters.length === 0) {
       return { commanded: 0, failed: 0 };
     }
@@ -484,8 +522,12 @@ export function createApp({
       return;
     }
     if (client.online) {
-      if (previous.language !== config.language) {
-        // The feature names of the devices still to be added.
+      if (
+        previous.language !== config.language ||
+        previous.allowDoorControl !== config.allowDoorControl
+      ) {
+        // The feature names of the devices still to be added, the read-only
+        // doors (a structure change: the Discovery tab offers the update).
         await gladys.publishDiscoveredDevices(discoveredDevices()).catch((err) => {
           logger.error(`Publishing the DiO devices failed (${err.message})`);
         });
@@ -563,7 +605,7 @@ export function createApp({
         configured: Boolean(config && isConfigured(config)),
         online: client.online,
         shutters: createdDevices()
-          .filter((dio) => dio.kind === KIND.SHUTTER)
+          .filter((dio) => dio.kind === KIND.SHUTTER && !doorOf(dio))
           .map((dio) => ({ name: dio.name, state: states.get(dio.id) })),
         language: LANGS.includes(language) ? language : (config?.language ?? 'fr'),
       }),

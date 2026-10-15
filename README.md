@@ -106,7 +106,10 @@ without printing any name, id or secret.
 - No dimmer, bulb, camera or schedule. Unknown device types are listed by the
   **List the devices** action so they can be added.
 - Device and feature names are fixed when the device is added to Gladys.
-- A garage door or a gate wired to a shutter module is seen as a shutter.
+- A garage door or a gate wired to a shutter module is **read-only by default**
+  (recognized by the module's calibration or by its name); the option _Allow
+  the control of garage doors and gates_ makes it controllable, as a shutter.
+  The widget and the "all shutters" scene action never move it.
 
 ## Development
 

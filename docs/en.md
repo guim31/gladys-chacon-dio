@@ -40,6 +40,8 @@ The other settings:
 - **Safety refresh**: changes arrive in real time, but as a safety net every
   added device is read again at this interval (every 5 minutes by default).
   One request reads every device.
+- **Allow the control of garage doors and gates**: off by default. See
+  "Garage doors and gates" below.
 - **Language of the feature names**: "Position", "Movement", "Plug"… in the
   chosen language (French by default). It applies to the devices added after
   the change: Gladys fixes the names when a device is added.
@@ -67,6 +69,24 @@ when the cloud itself does not answer.
 Dimmers, bulbs and cameras are not supported yet: their protocol is not
 documented. They show in the report of the **List the devices of the DiO
 account** button; send us their line so they can be added.
+
+### Garage doors and gates
+
+A DiO shutter module can also drive a garage door or a gate. Opening one from
+afar is unlocking a door: by default, these devices are **read-only**. Gladys
+shows their position but refuses every command, and neither the widget nor the
+"Move all DiO shutters" action touches them.
+
+The integration recognizes them by the calibration of the module, when it says
+door, or by their name in the DiO One app: "garage", "gate", "portail",
+"Tor", "verja"… A patio door shutter is not concerned. To have a device
+treated as a door, put one of these words in its name in the app, then scan
+again from the Discovery tab.
+
+To control them anyway, tick **Allow the control of garage doors and gates**,
+then apply the update offered in the Discovery tab. They stay shutters in
+Gladys, never switches, and stay out of the widget and of the "all shutters"
+action.
 
 ## Widget
 
@@ -157,5 +177,6 @@ they never show in the logs.
 - Device names are taken when the device is added to Gladys: renaming a device
   in the DiO app does not rename it in Gladys.
 - The doorbell gives neither picture nor video in Gladys, only the ring.
-- A garage door or a gate wired to a shutter module is seen as a shutter: do not
-  automate its opening without thinking about what a mistake would cause.
+- A garage door or a gate is recognized by the calibration of the module or by
+  its name: a name without any telling word passes for a shutter. Check that it
+  shows read-only once added.

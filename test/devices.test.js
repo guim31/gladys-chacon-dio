@@ -263,12 +263,12 @@ test('a device added later gets its states at once', async (t) => {
   await world.add([world.device('Prise congélateur')]);
   assert.equal(fake.lastState(featureId('plug', PRISE, 'power')), 0);
   assert.equal(fake.lastState(featureId('shutter', SALON, 'position')), undefined);
-  // The cached state of another device, sent at its creation (no new read).
-  await world.app.refresh();
+  // A shutter's state is read at discovery (its calibration says whether it
+  // is a door): sent from the cache at its creation, no new read.
   const reads = world.dio.requests.filter((r) => r.path === '/device/states').length;
   await world.add([world.device('Volet salon')]);
   assert.equal(fake.lastState(featureId('shutter', SALON, 'position')), 75);
-  assert.equal(world.dio.requests.filter((r) => r.path === '/device/states').length, reads + 1);
+  assert.equal(world.dio.requests.filter((r) => r.path === '/device/states').length, reads);
 });
 
 test('a scan reads the device list again', async (t) => {

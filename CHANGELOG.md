@@ -10,6 +10,15 @@ the notes of the version's GitHub Release.
 
 ## [Unreleased]
 
+### Changed
+
+- Garage doors and gates driven by a DiO shutter module are read-only by
+  default: recognized by the calibration of the module or by their name, they
+  show their position but refuse every command. The new option "Allow the
+  control of garage doors and gates" lets them be controlled, as shutters,
+  never as switches. The widget and the "Move all DiO shutters" scene action
+  never move them.
+
 ### Added
 
 - Chacon DiO devices of the DiO One app in Gladys, through the DiO cloud: roller

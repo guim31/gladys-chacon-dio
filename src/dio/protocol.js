@@ -77,7 +77,8 @@ const MOVEMENTS = ['up', 'down', 'stop'];
  * its link is: a pushed update may carry a single link (the open level of a
  * moving shutter), and must not erase the others.
  * @param {unknown} links
- * @returns {{ position?: number, movement?: string, on?: boolean, lastEvent?: { type: string, ts: string } }}
+ * @returns {{ position?: number, movement?: string, on?: boolean, door?: boolean,
+ *   lastEvent?: { type: string, ts: string } }}
  */
 export function parseLinks(links) {
   const state = {};
@@ -104,6 +105,12 @@ export function parseLinks(links) {
       case 'oic.r.switch.binary':
         if (link.value === 0 || link.value === 1) {
           state.on = link.value === 1;
+        }
+        break;
+      case 'gw.r.shutter.calibration':
+        // The module drives a garage door or a gate, not a shutter.
+        if (typeof link.door === 'boolean') {
+          state.door = link.door;
         }
         break;
       case 'gw.r.lastEvent':
