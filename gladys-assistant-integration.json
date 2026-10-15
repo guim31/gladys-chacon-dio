@@ -129,6 +129,24 @@
       ]
     },
     {
+      "key": "allow_door_control",
+      "type": "boolean",
+      "label": {
+        "en": "Allow the control of garage doors and gates",
+        "fr": "Autoriser la commande des portes de garage et portails",
+        "de": "Steuerung von Garagentoren und Hoftoren erlauben",
+        "es": "Permitir el control de puertas de garaje y verjas"
+      },
+      "description": {
+        "en": "Off: a garage door or a gate on a shutter module is read-only. Opening it from afar is unlocking a door.",
+        "fr": "Désactivé : une porte de garage ou un portail sur un module volet est en lecture seule. L'ouvrir à distance, c'est déverrouiller une porte.",
+        "de": "Aus: Ein Garagentor oder Hoftor an einem Rollladenmodul ist nur lesbar. Es aus der Ferne zu öffnen heißt, eine Tür aufzuschließen.",
+        "es": "Desactivado: una puerta de garaje o una verja en un módulo de persiana es de solo lectura. Abrirla a distancia es abrir una puerta."
+      },
+      "required": false,
+      "default": false
+    },
+    {
       "key": "language",
       "type": "select",
       "label": {

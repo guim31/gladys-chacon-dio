@@ -15,6 +15,7 @@ export const DEFAULT_CONFIG = {
   email: '',
   password: '',
   refresh_minutes: '5',
+  allow_door_control: false,
   language: 'fr',
 };
 
@@ -32,6 +33,9 @@ export function normalizeConfig(raw = {}) {
     // Kept as typed: spaces may be part of a password.
     password: typeof source.password === 'string' ? source.password : '',
     refreshMs: Number(pick('refresh_minutes', REFRESH_MINUTES)) * 60 * 1000,
+    // Off unless explicitly on: opening a garage or a gate from afar is
+    // unlocking a door.
+    allowDoorControl: source.allow_door_control === true || source.allow_door_control === 'true',
     language: LANGUAGES.includes(source.language) ? source.language : DEFAULT_CONFIG.language,
   };
 }

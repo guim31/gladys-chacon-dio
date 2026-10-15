@@ -278,6 +278,15 @@ qui a le réseau (faux compte par défaut, vrai compte avec `DIO_EMAIL` /
   relecture pour tous les appareils, reconnexion de 10 s à 10 min, et **aucune
   nouvelle tentative après un mot de passe refusé** (risque de blocage du compte)
   tant que la configuration n'est pas réenregistrée.
+- **Portes de garage et portails** : un module volet peut motoriser une porte ;
+  son étalonnage (`gw.r.shutter.calibration`) porte alors `door: true`. Ouvrir à
+  distance = déverrouiller : **lecture seule par défaut** (option
+  `allow_door_control`, désactivée), reconnus aussi au nom (`garage`,
+  `portail`, `gate`, `Tor`… jamais `porte` ni `door` : « volet porte-fenêtre »).
+  Les états des volets sont lus **avant** de publier la découverte, pour ne
+  jamais proposer une porte comme un volet. `onSetValue` refuse aussi un
+  appareil créé inscriptible avant d'être reconnu. Jamais dans le widget ni
+  dans `move_shutters`, même autorisés ; jamais publiés en interrupteur.
 - **Pièges de test** : `resolve(promesse)` adopte la promesse (l'ouverture du
   socket rend `{ closed }`, pas `closed`) ; les minuteurs simulés de `node:test`
   doivent aussi simuler `Date` pour le poller.

@@ -45,6 +45,8 @@ Les autres réglages :
 - **Relecture de secours** : les changements arrivent en temps réel, mais par
   sécurité tous les appareils ajoutés sont relus à cet intervalle (toutes les
   5 minutes par défaut). Une seule requête lit tous les appareils.
+- **Autoriser la commande des portes de garage et portails** : désactivé par
+  défaut. Voir « Portes de garage et portails » plus bas.
 - **Langue des noms de fonctionnalités** : « Position », « Mouvement »,
   « Prise »… dans la langue choisie (français par défaut). Elle s'applique aux
   appareils ajoutés après le changement : Gladys fige les noms à l'ajout.
@@ -74,6 +76,26 @@ Les variateurs, ampoules et caméras ne sont pas encore pris en charge : leur
 protocole n'est pas documenté. Ils apparaissent dans le rapport du bouton
 **Lister les appareils du compte DiO** ; envoyez-nous la ligne correspondante
 pour qu'ils soient ajoutés.
+
+### Portes de garage et portails
+
+Un module de volet DiO peut aussi motoriser une porte de garage ou un portail.
+Ouvrir l'un d'eux à distance, c'est comme déverrouiller une porte : par défaut,
+ces appareils sont **en lecture seule**. Gladys affiche leur position, mais
+refuse toute commande, et ni le widget ni l'action « Commander tous les volets
+DiO » ne les touchent.
+
+L'intégration les reconnaît à l'étalonnage du module, quand il indique une
+porte, ou à leur nom dans l'application DiO One : « garage », « portail »,
+« portillon », « gate », « Tor », « verja »… Un volet de porte-fenêtre n'est
+pas concerné. Pour qu'un appareil soit traité comme une porte, mettez l'un de
+ces mots dans son nom dans l'application, puis relancez une recherche dans
+l'onglet Découverte.
+
+Pour les piloter quand même, cochez **Autoriser la commande des portes de
+garage et portails**, puis appliquez la mise à jour proposée dans l'onglet
+Découverte. Ils restent des volets dans Gladys, jamais des interrupteurs, et
+restent exclus du widget et de l'action « tous les volets ».
 
 ## Widget
 
@@ -170,6 +192,6 @@ cloud de Chacon ; ils n'apparaissent jamais dans les journaux.
   appareil dans l'application DiO ne le renomme pas dans Gladys.
 - La sonnette ne donne ni image ni vidéo dans Gladys, seulement le coup de
   sonnette.
-- Une porte de garage ou un portail branché sur un module de volet est vu comme
-  un volet : n'automatisez pas son ouverture sans réfléchir à ce qu'une erreur
-  provoquerait.
+- Une porte de garage ou un portail est reconnu à l'étalonnage du module ou à
+  son nom : un nom sans aucun mot évocateur passe pour un volet. Vérifiez qu'il
+  apparaît bien en lecture seule après l'ajout.

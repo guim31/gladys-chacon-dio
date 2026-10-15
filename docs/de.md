@@ -43,6 +43,8 @@ Die weiteren Einstellungen:
 - **Sicherheitsabfrage**: Änderungen kommen in Echtzeit, aber zur Sicherheit
   werden alle hinzugefügten Geräte in diesem Abstand neu gelesen (standardmäßig
   alle 5 Minuten). Eine einzige Anfrage liest alle Geräte.
+- **Steuerung von Garagentoren und Hoftoren erlauben**: standardmäßig aus.
+  Siehe „Garagentore und Hoftore“ weiter unten.
 - **Sprache der Funktionsnamen**: „Position“, „Bewegung“, „Steckdose“… in der
   gewählten Sprache (standardmäßig Französisch). Die Sprache gilt für die Geräte, die
   nach der Änderung hinzugefügt werden: Gladys legt die Namen beim Hinzufügen
@@ -70,6 +72,25 @@ raus, Stecker gezogen) oder wenn die Cloud selbst nicht antwortet.
 Dimmer, Lampen und Kameras werden noch nicht unterstützt: Das Protokoll dieser
 Geräte ist nicht dokumentiert. Diese Geräte erscheinen im Bericht des Buttons **Geräte des
 DiO-Kontos auflisten**; schick uns ihre Zeile, damit sie hinzugefügt werden.
+
+### Garagentore und Hoftore
+
+Ein DiO-Rollladenmodul kann auch ein Garagentor oder ein Hoftor antreiben. Ein
+solches Tor aus der Ferne zu öffnen heißt, eine Tür aufzuschließen:
+standardmäßig sind diese Geräte **nur lesbar**. Gladys zeigt ihre Position,
+lehnt aber jeden Befehl ab, und weder das Widget noch die Aktion „Alle
+DiO-Rollläden steuern“ rühren sie an.
+
+Die Integration erkennt sie an der Kalibrierung des Moduls, wenn diese ein Tor
+meldet, oder an ihrem Namen in der App DiO One: „Garage“, „Tor“, „Gate“,
+„portail“, „verja“… Ein Rollladen an einer Terrassentür ist nicht betroffen.
+Damit ein Gerät als Tor behandelt wird, nimm eines dieser Wörter in seinen
+Namen in der App auf und starte im Tab Entdecken eine neue Suche.
+
+Um sie trotzdem zu steuern, aktiviere **Steuerung von Garagentoren und
+Hoftoren erlauben** und übernimm das im Tab Entdecken angebotene Update. In
+Gladys bleiben sie Rollläden, nie Schalter, und bleiben vom Widget und von der
+Aktion „alle Rollläden“ ausgenommen.
 
 ## Widget
 
@@ -168,6 +189,6 @@ Cloud von Chacon zu öffnen; sie erscheinen nie in den Protokollen.
 - Die Gerätenamen werden beim Hinzufügen zu Gladys übernommen: Ein in der
   DiO-App umbenanntes Gerät wird in Gladys nicht umbenannt.
 - Die Türklingel liefert in Gladys weder Bild noch Video, nur das Klingeln.
-- Ein Garagentor oder ein Hoftor an einem Rollladenmodul wird als Rollladen
-  gesehen: Automatisiere sein Öffnen nicht, ohne zu bedenken, was ein Fehler
-  auslösen würde.
+- Ein Garagentor oder Hoftor wird an der Kalibrierung des Moduls oder an
+  seinem Namen erkannt: Ein Name ohne passendes Wort gilt als Rollladen. Prüfe
+  nach dem Hinzufügen, dass es nur lesbar ist.

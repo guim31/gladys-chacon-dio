@@ -39,6 +39,22 @@ const STATE_TO_MOVEMENT = { 1: 'up', 0: 'stop', '-1': 'down' };
 
 export const SUPPORTED_KINDS = Object.values(KIND);
 
+// A garage door or a gate wired to a shutter module, recognized by its name
+// when the module does not say it (the `door` flag of its calibration).
+// "porte" and "door" are left out on purpose: "Volet porte-fenêtre" and
+// "patio door" are shutters. A false positive only makes a shutter read-only.
+const DOOR_NAME =
+  /(gara[gj]|portail|portillon|(?<!\p{L})gates?(?!\p{L})|verja|cancela|port[oó]n|tor(?!\p{L}))/iu;
+
+/**
+ * Is this shutter module a garage door or a gate?
+ * @param {{ kind: string, name: string }} dio
+ * @param {{ door?: boolean }|undefined} state its last known state
+ */
+export function isDoor(dio, state) {
+  return dio.kind === KIND.SHUTTER && (state?.door === true || DOOR_NAME.test(dio.name));
+}
+
 const feature = (ids, key, name, fields) => ({
   name,
   external_id: ids.feature(key),
@@ -50,9 +66,11 @@ const feature = (ids, key, name, fields) => ({
  * @param {object} gladys GladysIntegration
  * @param {{ id: string, name: string, kind: string, model: string }} dio a parsed DiO device
  * @param {string} language the language of the feature names
+ * @param {{ readOnly?: boolean }} [options] read-only: a garage door or a gate whose
+ *   control is not allowed in the configuration
  * @returns {object|null} null for a kind this integration does not publish
  */
-export function buildDevice(gladys, dio, language) {
+export function buildDevice(gladys, dio, language, { readOnly = false } = {}) {
   const ids = gladys.externalIds(dio.kind, dio.id);
   const names = NAMES[language] ?? NAMES.fr;
   let features;
@@ -65,7 +83,7 @@ export function buildDevice(gladys, dio, language) {
           unit: UNIT.PERCENT,
           min: 0,
           max: 100,
-          read_only: false,
+          read_only: readOnly,
           has_feedback: true,
         }),
         feature(ids, FEATURE.MOVEMENT, names.movement, {
@@ -73,7 +91,7 @@ export function buildDevice(gladys, dio, language) {
           type: TYPE.SHUTTER.STATE,
           min: -1,
           max: 1,
-          read_only: false,
+          read_only: readOnly,
           has_feedback: true,
         }),
       ];
