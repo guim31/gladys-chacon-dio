@@ -10,6 +10,25 @@ the notes of the version's GitHub Release.
 
 ## [Unreleased]
 
+### Added
+
+- A read-only **Diagnostic** button: the raw state of each device and the last
+  20 messages the DiO cloud pushed for the doorbell (or not recognized), ids
+  masked, to paste on the forum when a ring does not reach Gladys.
+- A doorbell ring writes one line in the logs.
+
+### Fixed
+
+- The doorbell no longer shows a ring nobody made: its resting value is no
+  longer sent again at every heartbeat, so the dashboard keeps the time of the
+  last real ring.
+- More doorbell rings recognized: an event time given as an epoch, a Tuya event
+  name for the press (`doorbell`, `call`…), a pushed state carrying `id` rather
+  than `di` or another action than `update`. A pushed state without `rc` no
+  longer marks the device offline.
+- The actions fail in red when the DiO cloud is out of reach, instead of
+  answering in green.
+
 ## [1.0.1] - 2026-10-15
 
 ### Changed

@@ -55,6 +55,13 @@ El botón **Listar los dispositivos de la cuenta DiO** muestra todo lo que
 contiene su cuenta, incluidos los dispositivos que la integración aún no
 admite, con su modelo y su tipo.
 
+El botón **Diagnóstico**, de solo lectura, muestra el estado bruto de cada
+dispositivo tal como lo da la nube DiO, y los 20 últimos mensajes enviados por
+la nube para el timbre (o que la integración no reconoce), con su hora. Los
+identificadores de los dispositivos pasan a ser #1, #2…, los demás
+identificadores y los tokens se ocultan, los enlaces solo conservan su host: el
+resultado puede pegarse en el foro o en una issue de GitHub.
+
 ## Los dispositivos
 
 Cada dispositivo DiO se convierte en un dispositivo de Gladys, con el nombre que
@@ -176,6 +183,14 @@ Chacon; nunca aparecen en los registros.
   calibración del módulo. Vuelva a calibrarlo en la aplicación DiO One.
 - Para más detalle, ponga el nivel de los registros en debug (variable
   `LOG_LEVEL=debug`): cada lectura y cada mensaje recibido quedan descritos.
+- **Una llamada al timbre no llega a Gladys** (ninguna escena, nada en el
+  panel): llame al timbre y, en los minutos siguientes, haga clic en
+  **Diagnóstico** y pegue el resultado en el foro. Muestra lo que la nube DiO
+  envía en una llamada, para poder admitir su formato. Una llamada también se
+  escribe en los registros, en una línea.
+- **El timbre muestra «Sin valor reciente»**: es normal tras dos días sin
+  llamadas. Su valor ya no se reenvía cada 6 horas, lo que mostraba en el panel
+  una llamada que nadie había hecho.
 
 ## Límites
 

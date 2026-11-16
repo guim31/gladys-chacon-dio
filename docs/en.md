@@ -50,6 +50,12 @@ The **List the devices of the DiO account** button shows everything your
 account holds, the devices the integration does not support yet included, with
 their model and type.
 
+The **Diagnostic** button is read-only: it shows the raw state of each device
+as the DiO cloud gives it, and the last 20 messages the cloud pushed for the
+doorbell (or that the integration does not recognize), with their time. Device
+ids become #1, #2…, identifiers and tokens are masked, links keep only their
+host: the result can be pasted on the forum or in a GitHub issue.
+
 ## Devices
 
 Each DiO device becomes a Gladys device, with the name you gave it in the DiO
@@ -166,6 +172,13 @@ they never show in the logs.
   calibration of the module. Calibrate it again in the DiO One app.
 - For more detail, set the log level to debug (`LOG_LEVEL=debug` variable):
   every read and every message received is described.
+- **A ring does not reach Gladys** (no scene, nothing on the dashboard): ring
+  the doorbell, then within a few minutes click **Diagnostic** and paste the
+  result on the forum. It shows what the DiO cloud sends at a ring, so that
+  its format can be supported. A ring is also written in the logs, one line.
+- **The doorbell shows "no recent value"**: normal after two days without a
+  ring. Its value is no longer sent again every 6 hours, as that showed a ring
+  nobody made on the dashboard.
 
 ## Limits
 

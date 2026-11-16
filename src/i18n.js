@@ -4,6 +4,18 @@
 // test/i18n.test.js). Brand and product names are not translated.
 // -----------------------------------------------------------------------------
 
+/**
+ * A failure shown in red by Gladys: the message is the multi-language object
+ * (a returned value is shown in green, a thrown one in red).
+ */
+export class ActionFailure extends Error {
+  constructor(text) {
+    super(text.en);
+    this.name = 'ActionFailure';
+    this.message = text;
+  }
+}
+
 /** Feature names, fixed when the user adds the device (config `language`). */
 export const NAMES = {
   en: {
@@ -109,6 +121,11 @@ export const TEXT = {
     reportUnsupportedHint:
       'A device "not supported yet"? Open an issue on GitHub with its model and type.',
     reportNotConnected: 'Not connected to the DiO cloud: check the e-mail and the password.',
+    diagTitle: 'Chacon DiO diagnostic',
+    diagNoState: '(no state read)',
+    diagPushed: (count) =>
+      `Messages pushed by the DiO cloud for the doorbell or not recognized (last ${count}):`,
+    diagNoPush: '(none since the start: ring, then run the diagnostic again)',
   },
   fr: {
     open: 'Ouvert',
@@ -133,6 +150,11 @@ export const TEXT = {
     reportUnsupportedHint:
       'Un appareil « pas encore pris en charge » ? Ouvrez une issue sur GitHub avec son modèle et son type.',
     reportNotConnected: 'Pas connecté au cloud DiO : vérifiez l’e-mail et le mot de passe.',
+    diagTitle: 'Diagnostic Chacon DiO',
+    diagNoState: '(aucun état lu)',
+    diagPushed: (count) =>
+      `Messages poussés par le cloud DiO pour la sonnette ou non reconnus (${count} derniers) :`,
+    diagNoPush: '(aucun depuis le démarrage : sonnez, puis relancez le diagnostic)',
   },
   de: {
     open: 'Offen',
@@ -157,6 +179,11 @@ export const TEXT = {
     reportUnsupportedHint:
       'Ein Gerät „noch nicht unterstützt“? Eröffne ein Issue auf GitHub mit Modell und Typ.',
     reportNotConnected: 'Nicht mit der DiO-Cloud verbunden: prüfe E-Mail-Adresse und Passwort.',
+    diagTitle: 'Chacon-DiO-Diagnose',
+    diagNoState: '(kein Zustand gelesen)',
+    diagPushed: (count) =>
+      `Von der DiO-Cloud gesendete Nachrichten für die Türklingel oder unbekannte (letzte ${count}):`,
+    diagNoPush: '(keine seit dem Start: klingle und starte die Diagnose erneut)',
   },
   es: {
     open: 'Abierta',
@@ -181,6 +208,11 @@ export const TEXT = {
     reportUnsupportedHint:
       '¿Un dispositivo «aún no compatible»? Abra una issue en GitHub con su modelo y su tipo.',
     reportNotConnected: 'Sin conexión con la nube DiO: compruebe el correo y la contraseña.',
+    diagTitle: 'Diagnóstico Chacon DiO',
+    diagNoState: '(ningún estado leído)',
+    diagPushed: (count) =>
+      `Mensajes enviados por la nube DiO para el timbre o no reconocidos (últimos ${count}):`,
+    diagNoPush: '(ninguno desde el inicio: llame al timbre y vuelva a lanzar el diagnóstico)',
   },
 };
 

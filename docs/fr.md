@@ -55,6 +55,13 @@ Le bouton **Lister les appareils du compte DiO** affiche tout ce que contient
 votre compte, y compris les appareils que l'intégration ne prend pas encore en
 charge, avec leur modèle et leur type.
 
+Le bouton **Diagnostic**, en lecture seule, affiche l'état brut de chaque
+appareil tel que le cloud DiO le donne, et les 20 derniers messages poussés par
+le cloud pour la sonnette (ou que l'intégration ne reconnaît pas), avec leur
+heure. Les identifiants d'appareils deviennent #1, #2…, les autres identifiants
+et les jetons sont masqués, les liens ne gardent que leur hôte : le résultat
+peut être collé sur le forum ou dans une issue GitHub.
+
 ## Les appareils
 
 Chaque appareil DiO devient un appareil Gladys, avec le nom que vous lui avez
@@ -179,6 +186,14 @@ cloud de Chacon ; ils n'apparaissent jamais dans les journaux.
   l'étalonnage du module. Refaites l'étalonnage dans l'application DiO One.
 - Pour plus de détails, passez le niveau des journaux en debug (variable
   `LOG_LEVEL=debug`) : chaque lecture et chaque message reçu y sont décrits.
+- **Une sonnerie n'arrive pas dans Gladys** (pas de scène, rien sur le tableau
+  de bord) : sonnez, puis dans les minutes qui suivent cliquez sur
+  **Diagnostic** et collez le résultat sur le forum. Il montre ce que le cloud
+  DiO envoie à une sonnerie, pour que son format soit pris en charge. Une
+  sonnerie est aussi écrite dans les journaux, en une ligne.
+- **La sonnette affiche « Pas de valeur récente »** : normal après deux jours
+  sans sonnerie. Sa valeur n'est plus renvoyée toutes les 6 heures, ce qui
+  affichait sur le tableau de bord une sonnerie que personne n'avait faite.
 
 ## Limites
 

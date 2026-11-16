@@ -199,6 +199,22 @@
         "es": "Todos los dispositivos de la cuenta, incluidos los aún no compatibles, con su modelo."
       },
       "timeout_seconds": 20
+    },
+    {
+      "key": "diagnostic",
+      "label": {
+        "en": "Diagnostic",
+        "fr": "Diagnostic",
+        "de": "Diagnose",
+        "es": "Diagnóstico"
+      },
+      "description": {
+        "en": "Read-only. The raw state of each device and the last messages pushed for the doorbell, ids masked: ring, then run it and paste the result on the forum.",
+        "fr": "Lecture seule. L'état brut de chaque appareil et les derniers messages poussés pour la sonnette, identifiants masqués : sonnez, lancez-le, puis collez le résultat sur le forum.",
+        "de": "Nur lesend. Der Rohzustand jedes Geräts und die letzten Nachrichten für die Türklingel, Kennungen maskiert: klingle, starte sie und füge das Ergebnis im Forum ein.",
+        "es": "Solo lectura. El estado bruto de cada dispositivo y los últimos mensajes enviados para el timbre, identificadores ocultos: llame, láncelo y pegue el resultado en el foro."
+      },
+      "timeout_seconds": 20
     }
   ],
   "scene_triggers": [

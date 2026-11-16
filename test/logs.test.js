@@ -1,6 +1,6 @@
 // -----------------------------------------------------------------------------
-// Quiet logs: a normal cycle (refresh, pushed states, a ring, the widget)
-// writes nothing at info; and no secret of the configuration — the password,
+// Quiet logs: a normal cycle (refresh, pushed states, the widget) writes
+// nothing at info but the doorbell ring, one line without id; and no secret of the configuration — the password,
 // the session token, the e-mail — ever reaches the logs, whatever happens.
 // -----------------------------------------------------------------------------
 
@@ -30,7 +30,9 @@ test('a normal cycle writes nothing at info', async (t) => {
   await world.app.refresh();
   await new Promise((resolve) => setTimeout(resolve, 60));
 
-  assert.deepEqual(world.logger.at('info').slice(infoBefore), []);
+  assert.deepEqual(world.logger.at('info').slice(infoBefore), [
+    'Doorbell ring: "Sonnette portail"',
+  ]);
   assert.deepEqual(world.logger.at('warn'), []);
   assert.deepEqual(world.logger.at('error'), []);
 });

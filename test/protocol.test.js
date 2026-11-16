@@ -9,6 +9,8 @@ import { readFile } from 'node:fs/promises';
 import {
   KIND,
   classifyMessage,
+  eventTime,
+  isRingEvent,
   kindOf,
   moveRequest,
   openLevelRequest,
@@ -162,4 +164,25 @@ test('the login answers are told apart', () => {
   assert.deepEqual(parseLoginResponse(401, null), { rejected: true });
   assert.ok(parseLoginResponse(503, null).error);
   assert.ok(parseLoginResponse(200, { status: 200, data: {} }).error);
+});
+
+test('a doorbell event time: ISO date, epoch seconds or milliseconds', () => {
+  const at = Date.parse('2026-11-16T08:20:08.000Z');
+  assert.equal(eventTime('2026-11-16T08:20:08.000Z'), at);
+  assert.equal(eventTime(String(at / 1000)), at);
+  assert.equal(eventTime(String(at)), at);
+  assert.ok(Number.isNaN(eventTime('')));
+  assert.deepEqual(parseLinks([{ rt: 'gw.r.lastEvent', type: 'ring', ts: at }]).lastEvent, {
+    type: 'ring',
+    ts: String(at),
+  });
+});
+
+test('a ring is "ring" or a Tuya name for it, never motion', () => {
+  for (const type of ['ring', 'RING', 'doorbell', 'door_bell', 'call']) {
+    assert.ok(isRingEvent(type), type);
+  }
+  for (const type of ['motion', 'sound', '', undefined]) {
+    assert.ok(!isRingEvent(type), String(type));
+  }
 });

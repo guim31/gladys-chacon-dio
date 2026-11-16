@@ -53,6 +53,13 @@ Die weiteren Einstellungen:
 Der Button **Geräte des DiO-Kontos auflisten** zeigt alles, was in deinem Konto
 ist, auch die noch nicht unterstützten Geräte, mit Modell und Typ.
 
+Der Button **Diagnose** ändert nichts: Er zeigt den Rohzustand jedes Geräts, so
+wie die DiO-Cloud ihn liefert, und die letzten 20 Nachrichten, die die Cloud für
+die Türklingel gesendet hat (oder die die Integration nicht erkennt), mit
+Uhrzeit. Gerätekennungen werden zu #1, #2…, andere Kennungen und Token werden
+maskiert, Links behalten nur ihren Host: Das Ergebnis kannst du im Forum oder in
+einem GitHub-Issue einfügen.
+
 ## Die Geräte
 
 Jedes DiO-Gerät wird ein Gladys-Gerät, mit dem Namen, den du ihm in der App
@@ -177,6 +184,14 @@ Cloud von Chacon zu öffnen; sie erscheinen nie in den Protokollen.
 - Für mehr Details stell die Protokollstufe auf debug (Variable
   `LOG_LEVEL=debug`): Jede Abfrage und jede empfangene Nachricht wird
   beschrieben.
+- **Ein Klingeln kommt nicht in Gladys an** (keine Szene, nichts im
+  Dashboard): Klingle, klicke dann innerhalb weniger Minuten auf **Diagnose**
+  und füge das Ergebnis im Forum ein. Es zeigt, was die DiO-Cloud bei einem
+  Klingeln sendet, damit dieses Format unterstützt werden kann. Ein Klingeln
+  wird auch in einer Zeile in die Protokolle geschrieben.
+- **Die Türklingel zeigt „Kein aktueller Wert“**: normal nach zwei Tagen ohne
+  Klingeln. Der Wert wird nicht mehr alle 6 Stunden erneut gesendet, denn das
+  zeigte im Dashboard ein Klingeln, das niemand gemacht hatte.
 
 ## Grenzen
 

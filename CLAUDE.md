@@ -44,6 +44,7 @@ src/poller.js                     the container's own refresh timer (Gladys#3198
 src/widgets.js                    "DiO shutters" widget content (pure builders)
 src/scenes.js                     scene trigger keys and the `move_shutters` scene action
 src/i18n.js                       every text of the code, in en / fr / de / es
+src/diagnostic.js                 the read-only "Diagnostic" report (raw states, doorbell pushes, masked)
 src/issues.js                     repeated failures logged once (from gladys-subsonic)
 src/config.js                     DEFAULT_CONFIG (mirrors the manifest defaults) + normalization
 scripts/probe.mjs                 read-only probe of the real DiO cloud (fake or real account)
@@ -271,6 +272,17 @@ qui a le réseau (faux compte par défaut, vrai compte avec `DIO_EMAIL` /
 - **Sonnette** : `gw.r.lastEvent` `{ type: "ring", ts }` ; une sonnerie = un `ts`
   nouveau **et récent** (2 min), sinon une relecture après reconnexion rejouerait
   un vieux coup de sonnette. Publiée en impulsion 1 puis 0 (`doorbell/ring`).
+  **Jamais de battement de cœur sur cette fonctionnalité** : le tableau de bord
+  affiche l'heure de la dernière valeur reçue, et un 0 republié toutes les 6 h
+  s'y lisait « Sonnerie il y a 3 heures » sans que personne ait sonné (retour de
+  Philippe_B, t/11254, 1.0.1). Le 0 ne part qu'au premier état et en fin
+  d'impulsion. Au 16/11/2026, **aucune sonnerie réelle n'était encore arrivée**
+  chez lui (DIOVDP-IP02) : le format réel est inconnu. Sont donc acceptés aussi
+  un `ts` en epoch (s ou ms), les types `doorbell`/`call`/`bell`, un
+  `deviceState` avec `id` au lieu de `di` ou une autre action qu'`update` ; un
+  push sans `rc` ne dit rien de la connexion. L'action **Diagnostic** garde les
+  20 derniers messages poussés pour la sonnette ou non reconnus (identifiants
+  masqués) : c'est elle qui donnera le vrai format.
 - **Commandes** : accusé `{ id, status: 200 }` immédiat, puis l'état réel arrive
   en `deviceState`. Sans push dans les 8 s, l'appareil est relu. Une lecture
   partie **avant** la commande répond l'ancien état : seul un push compte comme

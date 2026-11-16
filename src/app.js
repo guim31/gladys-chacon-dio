@@ -17,7 +17,15 @@
 // -----------------------------------------------------------------------------
 
 import { isConfigured, normalizeConfig, sameCredentials } from './config.js';
-import { KIND, moveRequest, openLevelRequest, switchRequest } from './dio/protocol.js';
+import { buildReport, PUSHED_KEPT } from './diagnostic.js';
+import {
+  KIND,
+  eventTime,
+  isRingEvent,
+  moveRequest,
+  openLevelRequest,
+  switchRequest,
+} from './dio/protocol.js';
 import {
   FEATURE,
   buildDevice,
@@ -27,7 +35,7 @@ import {
   parseFeatureExternalId,
   statesOf,
 } from './devices.js';
-import { STATUS, localized, LANGS, TEXT } from './i18n.js';
+import { ActionFailure, STATUS, localized, LANGS, TEXT } from './i18n.js';
 import { createIssueLog } from './issues.js';
 import { createPoller } from './poller.js';
 import { CONNECTION, SCENE_ACTIONS, TRIGGER } from './scenes.js';
@@ -79,6 +87,8 @@ export function createApp({
   const lastRing = new Map();
   /** When the ring pulse of a doorbell ends, by DiO id. */
   const pulseEnds = new Map();
+  /** Pushed messages about a doorbell, or not recognized (the diagnostic). */
+  let pushed = [];
   const unsupportedLogged = new Set();
   const doorsLogged = new Set();
   const pendingTimers = new Set();
@@ -123,12 +133,18 @@ export function createApp({
     }
   }
 
-  async function publishStates(list) {
+  /**
+   * @param {object[]} list
+   * @param {{ heartbeat?: boolean }} [options] false for the doorbell ring:
+   *   the dashboard shows when its last value came, a 0 sent again every 6 h
+   *   reads as a ring nobody made
+   */
+  async function publishStates(list, { heartbeat = true } = {}) {
     if (list.length === 0) {
       return;
     }
     try {
-      await gladys.publishChangedStates(list, { heartbeat: HEARTBEAT_MS });
+      await gladys.publishChangedStates(list, heartbeat ? { heartbeat: HEARTBEAT_MS } : {});
       issues.ok('publish', 'States accepted by Gladys again');
     } catch (err) {
       issues.fail('publish', `States not accepted by Gladys (${err.message})`);
@@ -278,26 +294,40 @@ export function createApp({
     if (!event) {
       return;
     }
+    const key = `${event.type}|${event.ts}`;
     const seen = lastRing.get(dio.id);
-    lastRing.set(dio.id, event.ts);
-    if (event.type !== 'ring' || event.ts === seen) {
+    lastRing.set(dio.id, key);
+    if (key === seen) {
       return;
     }
-    const at = Date.parse(event.ts);
-    if (!Number.isFinite(at) || now() - at > RING_FRESH_MS) {
+    if (!isRingEvent(event.type)) {
+      logger.debug(`Doorbell event "${event.type}" is not a ring, ignored`);
+      return;
+    }
+    const at = eventTime(event.ts);
+    // A little ahead is a clock gap between the cloud and this host, not a
+    // date in the future.
+    if (!Number.isFinite(at) || now() - at > RING_FRESH_MS || at - now() > RING_FRESH_MS) {
+      logger.debug(`Doorbell ring of ${event.ts} not recent, ignored`);
+      return;
+    }
+    if (pulsing(dio)) {
       return;
     }
     const ring = idsOf(dio).feature(FEATURE.RING);
-    logger.debug(`Doorbell ring on a DiO device`);
+    logger.info(`Doorbell ring: "${dio.name}"`);
     pulseEnds.set(dio.id, now() + ringPulseMs);
-    await publishStates([{ device_feature_external_id: ring, state: 1 }]);
+    await publishStates([{ device_feature_external_id: ring, state: 1 }], { heartbeat: false });
     later(ringPulseMs, () => {
       pulseEnds.delete(dio.id);
-      publishStates([{ device_feature_external_id: ring, state: 0 }]);
+      publishStates([{ device_feature_external_id: ring, state: 0 }], { heartbeat: false });
     });
   }
 
-  /** The resting state of the doorbell features (the heartbeat keeps it recent). */
+  /**
+   * The resting state of the doorbell features. Published without heartbeat:
+   * deduplicated, the 0 only goes out the first time and at the end of a ring.
+   */
   function restingStates(dios) {
     return dios
       .filter((dio) => dio.kind === KIND.DOORBELL)
@@ -318,7 +348,9 @@ export function createApp({
       const read = await client.readStates(targets.map((dio) => dio.id));
       issues.ok('refresh', 'Reading the DiO devices works again');
       const created = new Set(targets.map((dio) => idsOf(dio).device));
-      await publishStates(restingStates(targets.filter((dio) => !pulsing(dio))));
+      await publishStates(restingStates(targets.filter((dio) => !pulsing(dio))), {
+        heartbeat: false,
+      });
       for (const [id, state] of read) {
         await applyState(id, state, { created });
       }
@@ -340,7 +372,10 @@ export function createApp({
     }
     const known = states.get(dio.id);
     if (known) {
-      await publishStates([...statesOf(gladys, dio, known), ...restingStates([dio])]);
+      await publishStates(statesOf(gladys, dio, known));
+      if (!pulsing(dio)) {
+        await publishStates(restingStates([dio]), { heartbeat: false });
+      }
       await publishTransports([{ external_id: device.external_id, transport: transportOf(dio) }], {
         force: true,
       });
@@ -487,6 +522,20 @@ export function createApp({
     await setStatus(false, STATUS.rejected);
   });
 
+  client.on('pushed', (message, sorted) => {
+    const dio = sorted.kind === 'state' ? devices.get(sorted.id) : undefined;
+    // The doorbell's own pushes, and the ones this integration does not
+    // understand (a ring could come in a shape not documented yet). The
+    // shutters and plugs, which push often, are left out.
+    if (sorted.kind === 'state' && dio?.kind && dio.kind !== KIND.DOORBELL) {
+      return;
+    }
+    if (sorted.kind === 'state' && !dio) {
+      logger.debug('State pushed for a device not on the account list');
+    }
+    pushed = [...pushed, { at: now(), message }].slice(-PUSHED_KEPT);
+  });
+
   client.on('state', async (id, state) => {
     const created = new Set(createdDevices().map((dio) => idsOf(dio).device));
     await applyState(id, state, { created, pushed: true });
@@ -507,6 +556,7 @@ export function createApp({
         transports.clear();
         lastRing.clear();
         pulseEnds.clear();
+        pushed = [];
         everOnline = false;
       }
       if (!isConfigured(config)) {
@@ -596,6 +646,22 @@ export function createApp({
       return listDevicesReport();
     });
 
+    gladys.onAction('diagnostic', async () => {
+      logger.info('Action: diagnostic');
+      if (!client.online) {
+        throw new ActionFailure(localized('reportNotConnected'));
+      }
+      await syncDevices();
+      // Read every device again, for its raw state now.
+      const list = [...devices.values()];
+      try {
+        await client.readStates(list.map((dio) => dio.id));
+      } catch (err) {
+        logger.debug(`Diagnostic read failed (${err.message})`);
+      }
+      return buildReport({ devices: list, rawStates: client.rawStates, pushed, now: now() });
+    });
+
     for (const [key, handler] of Object.entries(SCENE_ACTIONS)) {
       gladys.onSceneAction(key, (fields) => handler(api, fields));
     }
@@ -626,7 +692,7 @@ export function createApp({
   /** The message of the "list devices" action: what the account holds, supported or not. */
   async function listDevicesReport() {
     if (!client.online) {
-      return localized('reportNotConnected');
+      throw new ActionFailure(localized('reportNotConnected'));
     }
     await syncDevices();
     const list = [...devices.values()];
