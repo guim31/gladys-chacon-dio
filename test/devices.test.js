@@ -501,8 +501,7 @@ test('a time without zone rings only when pushed live, never from a read', async
   };
   await world.app.refresh();
   assert.equal(ones(), 0);
-  world.dio.pushState(SONNETTE, [
-    { rt: 'gw.r.lastEvent', type: 'ring', ts: zoneless(Date.now() + 10000) },
-  ]);
+  // The same event pushed afterwards rings.
+  world.dio.pushState(SONNETTE, [world.dio.states[SONNETTE].links[2]]);
   await until(() => ones() === 1, { label: 'live ring' });
 });

@@ -306,6 +306,13 @@ export function createApp({
       logger.debug(`Doorbell ring time "${event.ts}" unreadable, ignored`);
       return;
     }
+    // A date without time zone may be read an hour or two off: only a live
+    // push, which is now by definition, can say it is a new ring. A read
+    // neither rings nor marks it seen (the push may follow).
+    if (isZoneless(event.ts) && !pushed) {
+      logger.debug('Doorbell time without time zone in a read, left to the push');
+      return;
+    }
     // The same press may come back in another shape (a push, then a read
     // with another time format): a ring must be clearly after the last one.
     const seen = lastRing.get(dio.id);
@@ -315,10 +322,7 @@ export function createApp({
     lastRing.set(dio.id, at);
     // A little ahead is a clock gap between the cloud and this host, not a
     // date in the future.
-    // A date without time zone may be read an hour or two off: only a live
-    // push, which is now by definition, can say it is a new ring.
-    const guessed = isZoneless(event.ts) && !pushed;
-    if (guessed || now() - at > RING_FRESH_MS || at - now() > RING_FRESH_MS) {
+    if (now() - at > RING_FRESH_MS || at - now() > RING_FRESH_MS) {
       logger.debug(`Doorbell ring of ${event.ts} not recent, ignored`);
       return;
     }
