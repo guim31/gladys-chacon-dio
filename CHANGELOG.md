@@ -21,8 +21,7 @@ the notes of the version's GitHub Release.
 
 - The doorbell no longer shows a ring nobody made: its resting value is no
   longer sent again at every heartbeat, refresh or restart, so the dashboard
-  keeps the time of the
-  last real ring.
+  keeps the time of the last real ring.
 - More doorbell rings recognized: an event time given as an epoch, a Tuya event
   name for the press (`doorbell`, `call`…), a pushed state carrying `id` rather
   than `di` or another action than `update`. A pushed state without `rc` no
