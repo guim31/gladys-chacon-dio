@@ -275,7 +275,7 @@ qui a le réseau (faux compte par défaut, vrai compte avec `DIO_EMAIL` /
   **Jamais de battement de cœur sur cette fonctionnalité** : le tableau de bord
   affiche l'heure de la dernière valeur reçue, et un 0 republié toutes les 6 h
   s'y lisait « Sonnerie il y a 3 heures » sans que personne ait sonné (retour de
-  Philippe_B, t/11254, 1.0.1). Le 0 ne part qu'au premier état et en fin
+  Philippe_B, t/11254, 1.0.1). Le 0 ne part qu'à l'ajout de l'appareil et en fin
   d'impulsion. Au 16/11/2026, **aucune sonnerie réelle n'était encore arrivée**
   chez lui (DIOVDP-IP02) : le format réel est inconnu. Sont donc acceptés aussi
   un `ts` en epoch (s ou ms), les types `doorbell`/`call`/`bell`, un

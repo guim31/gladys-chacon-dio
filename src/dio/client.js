@@ -108,6 +108,7 @@ export class DioClient extends EventEmitter {
   stop() {
     this.generation += 1;
     this.credentials = null;
+    this.rawStates.clear();
     this.wakeUp();
     this.closeSocket(new DioError('client stopped'));
   }

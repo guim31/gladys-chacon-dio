@@ -172,6 +172,8 @@ test('a doorbell event time: ISO date, epoch seconds or milliseconds', () => {
   assert.equal(eventTime(String(at / 1000)), at);
   assert.equal(eventTime(String(at)), at);
   assert.ok(Number.isNaN(eventTime('')));
+  // No time zone: read as UTC when that is the reading closest to now.
+  assert.equal(eventTime('2026-11-16T08:20:08', at + 1000), at);
   assert.deepEqual(parseLinks([{ rt: 'gw.r.lastEvent', type: 'ring', ts: at }]).lastEvent, {
     type: 'ring',
     ts: String(at),
@@ -182,7 +184,15 @@ test('a ring is "ring" or a Tuya name for it, never motion', () => {
   for (const type of ['ring', 'RING', 'doorbell', 'door_bell', 'call']) {
     assert.ok(isRingEvent(type), type);
   }
-  for (const type of ['motion', 'sound', '', undefined]) {
+  for (const type of [
+    'motion',
+    'sound',
+    'call_end',
+    'doorbell_motion',
+    'ringtone',
+    '',
+    undefined,
+  ]) {
     assert.ok(!isRingEvent(type), String(type));
   }
 });

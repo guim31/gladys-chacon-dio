@@ -17,7 +17,7 @@
 // -----------------------------------------------------------------------------
 
 import { isConfigured, normalizeConfig, sameCredentials } from './config.js';
-import { buildReport, PUSHED_KEPT } from './diagnostic.js';
+import { buildReport, keepable, PUSHED_KEPT } from './diagnostic.js';
 import {
   KIND,
   eventTime,
@@ -45,6 +45,8 @@ export const HEARTBEAT_MS = 6 * 60 * 60 * 1000;
 // A ring older than this, seen by a refresh after a reconnection, is history.
 export const RING_FRESH_MS = 2 * 60 * 1000;
 export const RING_PULSE_MS = 5000;
+// Two events of one doorbell this close are the same press.
+export const RING_SAME_MS = 5000;
 // No push after a command: read the device to show its real state.
 export const CONFIRM_DELAY_MS = 8000;
 // The core accepts one widget refresh request per 10 s.
@@ -83,7 +85,7 @@ export function createApp({
   let states = new Map();
   /** The last transport published, by device external id. */
   const transports = new Map();
-  /** The last doorbell event seen, by DiO id. */
+  /** When the last ring seen happened (ms), by DiO id. */
   const lastRing = new Map();
   /** When the ring pulse of a doorbell ends, by DiO id. */
   const pulseEnds = new Map();
@@ -294,20 +296,25 @@ export function createApp({
     if (!event) {
       return;
     }
-    const key = `${event.type}|${event.ts}`;
-    const seen = lastRing.get(dio.id);
-    lastRing.set(dio.id, key);
-    if (key === seen) {
-      return;
-    }
     if (!isRingEvent(event.type)) {
       logger.debug(`Doorbell event "${event.type}" is not a ring, ignored`);
       return;
     }
-    const at = eventTime(event.ts);
+    const at = eventTime(event.ts, now());
+    if (!Number.isFinite(at)) {
+      logger.debug(`Doorbell ring time "${event.ts}" unreadable, ignored`);
+      return;
+    }
+    // The same press may come back in another shape (a push, then a read
+    // with another time format): a ring must be clearly after the last one.
+    const seen = lastRing.get(dio.id);
+    if (seen !== undefined && at <= seen + RING_SAME_MS) {
+      return;
+    }
+    lastRing.set(dio.id, at);
     // A little ahead is a clock gap between the cloud and this host, not a
     // date in the future.
-    if (!Number.isFinite(at) || now() - at > RING_FRESH_MS || at - now() > RING_FRESH_MS) {
+    if (now() - at > RING_FRESH_MS || at - now() > RING_FRESH_MS) {
       logger.debug(`Doorbell ring of ${event.ts} not recent, ignored`);
       return;
     }
@@ -325,8 +332,10 @@ export function createApp({
   }
 
   /**
-   * The resting state of the doorbell features. Published without heartbeat:
-   * deduplicated, the 0 only goes out the first time and at the end of a ring.
+   * The resting state of the doorbell features. Never sent by the refresh nor
+   * by a heartbeat: the dashboard shows when the last value came, a 0 sent
+   * again reads as a ring nobody made. Only when the device is added, and at
+   * the end of a ring.
    */
   function restingStates(dios) {
     return dios
@@ -348,9 +357,6 @@ export function createApp({
       const read = await client.readStates(targets.map((dio) => dio.id));
       issues.ok('refresh', 'Reading the DiO devices works again');
       const created = new Set(targets.map((dio) => idsOf(dio).device));
-      await publishStates(restingStates(targets.filter((dio) => !pulsing(dio))), {
-        heartbeat: false,
-      });
       for (const [id, state] of read) {
         await applyState(id, state, { created });
       }
@@ -370,12 +376,12 @@ export function createApp({
     if (!dio) {
       return;
     }
+    if (!pulsing(dio)) {
+      await publishStates(restingStates([dio]), { heartbeat: false });
+    }
     const known = states.get(dio.id);
     if (known) {
       await publishStates(statesOf(gladys, dio, known));
-      if (!pulsing(dio)) {
-        await publishStates(restingStates([dio]), { heartbeat: false });
-      }
       await publishTransports([{ external_id: device.external_id, transport: transportOf(dio) }], {
         force: true,
       });
@@ -531,9 +537,13 @@ export function createApp({
       return;
     }
     if (sorted.kind === 'state' && !dio) {
+      if (devices.size === 0) {
+        // Before the device list is read: nothing tells a doorbell yet.
+        return;
+      }
       logger.debug('State pushed for a device not on the account list');
     }
-    pushed = [...pushed, { at: now(), message }].slice(-PUSHED_KEPT);
+    pushed = [...pushed, { at: now(), message: keepable(message) }].slice(-PUSHED_KEPT);
   });
 
   client.on('state', async (id, state) => {

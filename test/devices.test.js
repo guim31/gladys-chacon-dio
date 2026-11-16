@@ -458,3 +458,30 @@ test('the actions fail in red when the DiO cloud is out of reach', async (t) => 
     assert.match(ack.error.fr, /Pas connecté au cloud DiO/);
   }
 });
+
+test('one press seen twice in two shapes rings once; a motion does not replay an old ring', async (t) => {
+  const world = await createWorld({ timing: { ringPulseMs: 10 } });
+  t.after(() => world.stop());
+  const fake = world.gladys.fake;
+  const ring = featureId('doorbell', SONNETTE, 'ring');
+  const ones = () =>
+    fake.states.filter((s) => s.device_feature_external_id === ring && s.state === 1).length;
+  const at = Date.now() - 1000;
+  world.dio.pushState(SONNETTE, [{ rt: 'gw.r.lastEvent', type: 'doorbell', ts: at }]);
+  await until(() => ones() === 1, { label: 'ring' });
+  await until(() => fake.lastState(ring) === 0, { label: 'end of the pulse' });
+  // The same press, read back as an ISO date of type "ring".
+  world.dio.pushState(SONNETTE, [
+    { rt: 'gw.r.lastEvent', type: 'ring', ts: new Date(at + 300).toISOString() },
+  ]);
+  world.dio.pushState(SONNETTE, [{ rt: 'gw.r.lastEvent', type: 'motion', ts: Date.now() }]);
+  world.dio.pushState(SONNETTE, [
+    { rt: 'gw.r.lastEvent', type: 'ring', ts: new Date(at).toISOString() },
+  ]);
+  await new Promise((resolve) => setTimeout(resolve, 60));
+  assert.equal(ones(), 1);
+  // "call_end" is not a ring.
+  world.dio.pushState(SONNETTE, [{ rt: 'gw.r.lastEvent', type: 'call_end', ts: Date.now() }]);
+  await new Promise((resolve) => setTimeout(resolve, 40));
+  assert.equal(ones(), 1);
+});

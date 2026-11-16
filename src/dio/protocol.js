@@ -133,18 +133,28 @@ export function parseLinks(links) {
 /**
  * When a doorbell event happened.
  * @param {string} ts the `ts` of `gw.r.lastEvent`: an ISO date or an epoch
+ * @param {number} [now] an ISO date without time zone is read both as UTC and
+ *   as local time (the container gets Gladys' `TZ`): the reading closest to it wins
  * @returns {number} milliseconds since the epoch, NaN when unreadable
  */
-export function eventTime(ts) {
+export function eventTime(ts, now = Date.now()) {
   if (typeof ts !== 'string' || ts.trim() === '') {
     return NaN;
   }
-  if (/^\d+(\.\d+)?$/.test(ts.trim())) {
-    const value = Number(ts);
+  const text = ts.trim();
+  if (/^\d+(\.\d+)?$/.test(text)) {
+    const value = Number(text);
     // Below 1e12 it can only be seconds (1e12 ms is in 2001).
     return value < 1e12 ? value * 1000 : value;
   }
-  return Date.parse(ts);
+  const local = Date.parse(text);
+  if (/T\d{2}:\d{2}(:\d{2}(\.\d+)?)?$/.test(text)) {
+    const utc = Date.parse(`${text}Z`);
+    if (Number.isFinite(utc) && !(Math.abs(now - local) <= Math.abs(now - utc))) {
+      return utc;
+    }
+  }
+  return local;
 }
 
 /**
@@ -154,7 +164,7 @@ export function eventTime(ts) {
  * @param {string} type
  */
 export function isRingEvent(type) {
-  return typeof type === 'string' && /^(ring|doorbell|door_bell|bell|call)/i.test(type.trim());
+  return typeof type === 'string' && /^(ring|doorbell|door_bell|bell|call)$/i.test(type.trim());
 }
 
 /**
