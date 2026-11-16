@@ -22,6 +22,7 @@ import {
   KIND,
   eventTime,
   isRingEvent,
+  isZoneless,
   moveRequest,
   openLevelRequest,
   switchRequest,
@@ -284,7 +285,7 @@ export function createApp({
     }
 
     if (dio.kind === KIND.DOORBELL) {
-      await checkRing(dio, incoming.lastEvent);
+      await checkRing(dio, incoming.lastEvent, pushed);
     }
     const seen = (state) => [state?.connected, state?.position, state?.movement].join('|');
     if (dio.kind === KIND.SHUTTER && seen(previous) !== seen(merged)) {
@@ -292,7 +293,7 @@ export function createApp({
     }
   }
 
-  async function checkRing(dio, event) {
+  async function checkRing(dio, event, pushed = false) {
     if (!event) {
       return;
     }
@@ -314,7 +315,10 @@ export function createApp({
     lastRing.set(dio.id, at);
     // A little ahead is a clock gap between the cloud and this host, not a
     // date in the future.
-    if (now() - at > RING_FRESH_MS || at - now() > RING_FRESH_MS) {
+    // A date without time zone may be read an hour or two off: only a live
+    // push, which is now by definition, can say it is a new ring.
+    const guessed = isZoneless(event.ts) && !pushed;
+    if (guessed || now() - at > RING_FRESH_MS || at - now() > RING_FRESH_MS) {
       logger.debug(`Doorbell ring of ${event.ts} not recent, ignored`);
       return;
     }
@@ -370,13 +374,13 @@ export function createApp({
   const pulsing = (dio) => pulseEnds.has(dio.id);
 
   /** A device just added (or updated) in Gladys: send everything now. */
-  async function onDeviceAdded(device) {
+  async function onDeviceAdded(device, { created = false } = {}) {
     const target = parseDeviceExternalId(gladys, device.external_id);
     const dio = target && devices.get(target.dioId);
     if (!dio) {
       return;
     }
-    if (!pulsing(dio)) {
+    if (created && !pulsing(dio)) {
       await publishStates(restingStates([dio]), { heartbeat: false });
     }
     const known = states.get(dio.id);
@@ -648,8 +652,10 @@ export function createApp({
       }
       await poller.fromCore();
     });
-    gladys.onDeviceCreated(onDeviceAdded);
-    gladys.onDeviceUpdated(onDeviceAdded);
+    // The resting 0 of a doorbell only at its creation: sent again at an
+    // update, it would show as a ring nobody made.
+    gladys.onDeviceCreated((device) => onDeviceAdded(device, { created: true }));
+    gladys.onDeviceUpdated((device) => onDeviceAdded(device));
 
     gladys.onAction('list_devices', async () => {
       logger.info('Action: list the DiO devices');

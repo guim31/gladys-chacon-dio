@@ -141,7 +141,7 @@ export function eventTime(ts, now = Date.now()) {
   if (typeof ts !== 'string' || ts.trim() === '') {
     return NaN;
   }
-  const text = ts.trim();
+  const text = ts.trim().replace(/^(\d{4}-\d{2}-\d{2}) (\d)/, '$1T$2');
   if (/^\d+(\.\d+)?$/.test(text)) {
     const value = Number(text);
     // Below 1e12 it can only be seconds (1e12 ms is in 2001).
@@ -155,6 +155,17 @@ export function eventTime(ts, now = Date.now()) {
     }
   }
   return local;
+}
+
+/**
+ * Whether a doorbell time is a date without time zone, whose reading (UTC or
+ * local) is a guess.
+ * @param {string} ts
+ */
+export function isZoneless(ts) {
+  return (
+    typeof ts === 'string' && /^\d{4}-\d{2}-\d{2}[T ]\d{2}:\d{2}(:\d{2}(\.\d+)?)?$/.test(ts.trim())
+  );
 }
 
 /**

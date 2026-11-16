@@ -485,3 +485,24 @@ test('one press seen twice in two shapes rings once; a motion does not replay an
   await new Promise((resolve) => setTimeout(resolve, 40));
   assert.equal(ones(), 1);
 });
+
+test('a time without zone rings only when pushed live, never from a read', async (t) => {
+  const world = await createWorld({ timing: { ringPulseMs: 10 } });
+  t.after(() => world.stop());
+  const fake = world.gladys.fake;
+  const ring = featureId('doorbell', SONNETTE, 'ring');
+  const ones = () =>
+    fake.states.filter((s) => s.device_feature_external_id === ring && s.state === 1).length;
+  const zoneless = (ms) => new Date(ms).toISOString().slice(0, 19);
+  world.dio.states[SONNETTE].links[2] = {
+    rt: 'gw.r.lastEvent',
+    type: 'ring',
+    ts: zoneless(Date.now()),
+  };
+  await world.app.refresh();
+  assert.equal(ones(), 0);
+  world.dio.pushState(SONNETTE, [
+    { rt: 'gw.r.lastEvent', type: 'ring', ts: zoneless(Date.now() + 10000) },
+  ]);
+  await until(() => ones() === 1, { label: 'live ring' });
+});

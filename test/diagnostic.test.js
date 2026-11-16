@@ -84,8 +84,15 @@ test('a default device name loses its MAC suffix; a huge push is summed up', () 
   const big = keepable({
     name: 'deviceState',
     action: 'update',
-    data: { links: [{ rt: 'gw.r.lastEvent', type: 'ring', ts: '1', image: 'x'.repeat(10000) }] },
+    data: { di: 'X1', links: [{ type: 'call', img: 'x'.repeat(10000), dp: { ring: true } }] },
   });
   assert.ok(JSON.stringify(big).length < 500);
-  assert.equal(big.links[0].type, 'ring');
+  assert.deepEqual(big.data, {
+    di: 'X1',
+    links: [{ type: 'call', img: '<10000 characters>', dp: { ring: true } }],
+  });
+  const raw = JSON.stringify(
+    sanitize({ di: 'L4HActuator_ff99ee88dd77', label: 'DIOVDP_0A1B2C3D' }, new Map()),
+  );
+  assert.ok(!raw.includes('ff99') && !raw.includes('0A1B2C3D'), raw);
 });

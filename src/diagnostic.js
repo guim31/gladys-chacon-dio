@@ -10,8 +10,8 @@ import { LANGS, TEXT } from './i18n.js';
 /** The pushed messages kept for the diagnostic. */
 export const PUSHED_KEPT = 20;
 const MAX_STRING = 160;
-// A pushed message bigger than this (a picture in base64, say) is summed up.
-const MAX_MESSAGE = 4000;
+// A longer string of a pushed message (a picture in base64, say) is not kept.
+const MAX_KEPT_STRING = 200;
 
 // Keys whose value identifies the account, the device, the place or the
 // network, compared lowercased without `_` and `-`, by their end:
@@ -56,7 +56,7 @@ const MASKED_ENDINGS = [
   'longitude',
 ];
 // `n` is the network name of a module, ending with its MAC (`CERSwd-3B_0A1B2C`).
-const MASKED_EXACT = ['n', 'sn'];
+const MASKED_EXACT = ['n', 'sn', 'di'];
 
 const isMaskedKey = (key) => {
   const name = String(key).toLowerCase().replace(/[_-]/g, '');
@@ -90,6 +90,8 @@ export function maskText(value, aliases = new Map()) {
   for (const [pattern, replacement] of VALUE_PATTERNS) {
     text = text.replace(pattern, replacement);
   }
+  // A default name ends with a part of the MAC (`DIOVDP_0A1B2C3D`).
+  text = text.replace(/([A-Za-z][\w]*[_-])(?=[0-9A-Fa-f]*\d)[0-9A-Fa-f]{4,}\b/g, '$1***');
   return text.length > MAX_STRING ? `${text.slice(0, MAX_STRING)}…` : text;
 }
 
@@ -126,25 +128,23 @@ export function sanitize(value, aliases, key = '') {
   return typeof value === 'string' ? maskText(value, aliases) : '?';
 }
 
-/** A pushed message as kept in memory: as is, or summed up when too big. */
+/**
+ * A pushed message as kept in memory: its whole structure, the long strings
+ * (a picture in base64, say) replaced by their length.
+ */
 export function keepable(message) {
-  let size;
-  try {
-    size = JSON.stringify(message).length;
-  } catch {
-    return { unreadable: true };
+  if (typeof message === 'string') {
+    return message.length > MAX_KEPT_STRING ? `<${message.length} characters>` : message;
   }
-  if (size <= MAX_MESSAGE) {
-    return message;
+  if (Array.isArray(message)) {
+    return message.map(keepable);
   }
-  return {
-    name: message?.name,
-    action: message?.action,
-    truncated: `${size} characters`,
-    links: Array.isArray(message?.data?.links)
-      ? message.data.links.map((link) => ({ rt: link?.rt, type: link?.type, ts: link?.ts }))
-      : undefined,
-  };
+  if (message && typeof message === 'object') {
+    return Object.fromEntries(
+      Object.entries(message).map(([key, value]) => [key, keepable(value)]),
+    );
+  }
+  return message;
 }
 
 const clock = (at) => new Date(at).toISOString().replace('T', ' ').slice(0, 19);
@@ -168,8 +168,7 @@ export function buildReport({ devices, rawStates, pushed, now }) {
       devices.forEach((dio, index) => {
         const model = dio.model ? ` (${dio.model})` : '';
         // The default name of a module often ends with a part of its MAC.
-        const name = maskText(dio.name).replace(/[_-][0-9a-f]{4,}$/i, '-***');
-        lines.push(`#${index + 1} ${name}${model} — ${dio.type || '?'}`);
+        lines.push(`#${index + 1} ${maskText(dio.name)}${model} — ${dio.type || '?'}`);
         const raw = rawStates.has(dio.id) ? json(rawStates.get(dio.id)) : t.diagNoState;
         lines.push(`  ${raw}`);
       });
