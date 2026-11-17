@@ -69,7 +69,7 @@ test('every manifest action has a registered handler', async () => {
   for (const action of manifest.actions ?? []) {
     const ack = await registered.fake.action(action.key, {});
     assert.doesNotMatch(
-      ack.error ?? '',
+      JSON.stringify(ack.error ?? ''),
       /not implemented/i,
       `manifest action "${action.key}" has no handler`,
     );

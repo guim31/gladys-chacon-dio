@@ -15,7 +15,8 @@
 //   otherwise stop the pushed states without anyone noticing.
 //
 // Events: 'online', 'offline' (Error), 'connect-failed' (Error), 'rejected',
-// 'state' (id, state).
+// 'state' (id, state), 'pushed' (raw message, sorted) for every message the
+// server pushes on its own (the diagnostic of the doorbell).
 // -----------------------------------------------------------------------------
 
 import { EventEmitter } from 'node:events';
@@ -86,6 +87,8 @@ export class DioClient extends EventEmitter {
     this.keepaliveTimer = null;
     this.sleeping = null;
     this.finishers = new WeakMap();
+    /** The last raw answer of `/device/states`, by id (the diagnostic). */
+    this.rawStates = new Map();
   }
 
   /**
@@ -105,6 +108,7 @@ export class DioClient extends EventEmitter {
   stop() {
     this.generation += 1;
     this.credentials = null;
+    this.rawStates.clear();
     this.wakeUp();
     this.closeSocket(new DioError('client stopped'));
   }
@@ -171,6 +175,7 @@ export class DioClient extends EventEmitter {
     const data = await this.request(readStatesRequest(ids));
     for (const id of ids) {
       if (data && typeof data === 'object' && id in data) {
+        this.rawStates.set(id, data[id]);
         states.set(id, parseDeviceState(data[id]));
       }
     }
@@ -348,6 +353,9 @@ export class DioClient extends EventEmitter {
           }
           return;
         }
+        if (sorted.kind !== 'response') {
+          this.emit('pushed', message, sorted);
+        }
         this.handleMessage(sorted);
       });
       socket.addEventListener('error', () => {
@@ -384,7 +392,7 @@ export class DioClient extends EventEmitter {
       return;
     }
     // A device renamed in the app, and messages this integration does not use.
-    this.logger.debug(`DiO message ${sorted.name ?? sorted.kind} ignored`);
+    this.logger.debug(`DiO message not recognized, ignored: ${sorted.name ?? sorted.kind}`);
   }
 
   startKeepalive(socket) {

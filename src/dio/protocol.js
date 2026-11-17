@@ -114,8 +114,13 @@ export function parseLinks(links) {
         }
         break;
       case 'gw.r.lastEvent':
-        if (typeof link.type === 'string' && typeof link.ts === 'string') {
-          state.lastEvent = { type: link.type, ts: link.ts };
+        // The documented form is an ISO date; a Tuya device may also give an
+        // epoch (seconds or milliseconds), as a number or a string.
+        if (
+          typeof link.type === 'string' &&
+          (typeof link.ts === 'string' || Number.isFinite(link.ts))
+        ) {
+          state.lastEvent = { type: link.type, ts: String(link.ts) };
         }
         break;
       default:
@@ -123,6 +128,54 @@ export function parseLinks(links) {
     }
   }
   return state;
+}
+
+/**
+ * When a doorbell event happened.
+ * @param {string} ts the `ts` of `gw.r.lastEvent`: an ISO date or an epoch
+ * @param {number} [now] an ISO date without time zone is read both as UTC and
+ *   as local time (the container gets Gladys' `TZ`): the reading closest to it wins
+ * @returns {number} milliseconds since the epoch, NaN when unreadable
+ */
+export function eventTime(ts, now = Date.now()) {
+  if (typeof ts !== 'string' || ts.trim() === '') {
+    return NaN;
+  }
+  const text = ts.trim().replace(/^(\d{4}-\d{2}-\d{2}) (\d)/, '$1T$2');
+  if (/^\d+(\.\d+)?$/.test(text)) {
+    const value = Number(text);
+    // Below 1e12 it can only be seconds (1e12 ms is in 2001).
+    return value < 1e12 ? value * 1000 : value;
+  }
+  const local = Date.parse(text);
+  if (/T\d{2}:\d{2}(:\d{2}(\.\d+)?)?$/.test(text)) {
+    const utc = Date.parse(`${text}Z`);
+    if (Number.isFinite(utc) && !(Math.abs(now - local) <= Math.abs(now - utc))) {
+      return utc;
+    }
+  }
+  return local;
+}
+
+/**
+ * Whether a doorbell time is a date without time zone, whose reading (UTC or
+ * local) is a guess.
+ * @param {string} ts
+ */
+export function isZoneless(ts) {
+  return (
+    typeof ts === 'string' && /^\d{4}-\d{2}-\d{2}[T ]\d{2}:\d{2}(:\d{2}(\.\d+)?)?$/.test(ts.trim())
+  );
+}
+
+/**
+ * Whether a doorbell event is someone ringing. "ring" is the documented type;
+ * the names a Tuya doorbell gives the same press are accepted too, never a
+ * motion or a sound detection.
+ * @param {string} type
+ */
+export function isRingEvent(type) {
+  return typeof type === 'string' && /^(ring|doorbell|door_bell|bell|call)$/i.test(type.trim());
 }
 
 /**
@@ -154,12 +207,16 @@ export function classifyMessage(message) {
   if (message.id !== undefined && message.name === undefined) {
     return { kind: 'response', id: Number(message.id), status: message.status, data: message.data };
   }
-  if (
-    message.name === 'deviceState' &&
-    message.action === 'update' &&
-    typeof message.data?.di === 'string'
-  ) {
-    return { kind: 'state', id: message.data.di, state: parseDeviceState(message.data) };
+  // `update` is the documented action; any other one carrying a device id
+  // is taken the same way rather than lost (a doorbell event, say).
+  const stateId = message.data?.di ?? message.data?.id;
+  if (message.name === 'deviceState' && typeof stateId === 'string' && stateId !== '') {
+    const state = parseDeviceState(message.data);
+    if (message.data.rc === undefined) {
+      // A push without `rc` says nothing about the connection.
+      delete state.connected;
+    }
+    return { kind: 'state', id: stateId, state };
   }
   if (message.id !== undefined) {
     // e.g. the logout answer, which carries both an id and a name.

@@ -354,3 +354,154 @@ test('another account: the old session is closed and the devices replaced', asyn
   await until(() => world.dio.logins.length === 2);
   await until(() => world.client.online);
 });
+
+test('the resting 0 of the doorbell is sent once, not at every refresh (no false ring time)', async (t) => {
+  const world = await createWorld();
+  t.after(() => world.stop());
+  const fake = world.gladys.fake;
+  const ring = featureId('doorbell', SONNETTE, 'ring');
+  const ringStates = () =>
+    fake.states.filter((s) => s.device_feature_external_id === ring).map((s) => s.state);
+  await world.app.refresh();
+  await world.app.refresh();
+  assert.deepEqual(ringStates(), [0]);
+
+  world.dio.pushState(SONNETTE, [
+    { rt: 'gw.r.lastEvent', type: 'ring', ts: new Date().toISOString(), data: {} },
+  ]);
+  await until(() => ringStates().length === 3, { label: 'pulse' });
+  await world.app.refresh();
+  await world.app.refresh();
+  assert.deepEqual(ringStates(), [0, 1, 0]);
+});
+
+test('a ring in another shape: epoch time, "doorbell" type, no `rc`, `id` for `di`', async (t) => {
+  const world = await createWorld();
+  t.after(() => world.stop());
+  const fake = world.gladys.fake;
+  const ring = featureId('doorbell', SONNETTE, 'ring');
+  const ones = () =>
+    fake.states.filter((s) => s.device_feature_external_id === ring && s.state === 1).length;
+
+  // Motion is not a ring.
+  world.dio.push({
+    name: 'deviceState',
+    action: 'event',
+    data: { id: SONNETTE, links: [{ rt: 'gw.r.lastEvent', type: 'motion', ts: Date.now() }] },
+  });
+  await new Promise((resolve) => setTimeout(resolve, 40));
+  assert.equal(ones(), 0);
+
+  world.dio.push({
+    name: 'deviceState',
+    action: 'event',
+    data: {
+      id: SONNETTE,
+      links: [{ rt: 'gw.r.lastEvent', type: 'doorbell', ts: Math.floor(Date.now() / 1000) }],
+    },
+  });
+  await until(() => ones() === 1, { label: 'ring' });
+  // A push without `rc` does not take the doorbell offline.
+  const pill = fake.transports
+    .filter((entry) => entry.device_external_id === deviceId('doorbell', SONNETTE))
+    .at(-1);
+  assert.equal(pill.transport, 'cloud');
+  assert.ok(
+    !world.logger.at('info').some((line) => line.includes('is offline')),
+    'no offline line',
+  );
+});
+
+test('the "diagnostic" action: raw states and doorbell pushes, ids and links masked', async (t) => {
+  const world = await createWorld();
+  t.after(() => world.stop());
+  const fake = world.gladys.fake;
+  world.dio.pushState(SALON, [{ rt: 'oic.r.openlevel', openLevel: 12 }]);
+  world.dio.pushState(SONNETTE, [
+    {
+      rt: 'gw.r.lastEvent',
+      type: 'ring',
+      ts: new Date().toISOString(),
+      data: { image: 'https://cdn.example.com/Tuya_bf00112233445566778899/1.jpeg?sig=abc' },
+    },
+  ]);
+  world.dio.push({ name: 'mystery', action: 'ping', data: { token: 'r:0123', uid: 'u-42' } });
+  await until(() => fake.lastState(featureId('shutter', SALON, 'position')) === 12);
+
+  const ack = await fake.action('diagnostic', {});
+  assert.equal(ack.success, true);
+  const message = ack.data.message ?? ack.data;
+  const fr = message.fr;
+  assert.match(fr, /^Diagnostic Chacon DiO/);
+  assert.match(fr, /#5 Sonnette portail \(DIOVDP-B03\) — \.wifi\.doorBell\./);
+  assert.match(fr, /"type":"ring"/);
+  assert.match(fr, /"image":"https:\/\/cdn\.example\.com\/…"/);
+  assert.match(fr, /"mystery"/);
+  assert.match(fr, /"token":"\*\*\*","uid":"\*\*\*"/);
+  // The shutter's push is left out of the pushed list, which holds 2 messages.
+  assert.match(fr, /\(2 derniers\)/);
+  for (const secret of ['Tuya_bf', 'L4HActuator_', 'sig=abc', 'r:0123', 'u-42']) {
+    assert.ok(!fr.includes(secret), `not masked: ${secret}`);
+  }
+  for (const lang of ['en', 'de', 'es']) {
+    assert.ok(message[lang].length > 100);
+  }
+});
+
+test('the actions fail in red when the DiO cloud is out of reach', async (t) => {
+  const world = await createWorld();
+  t.after(() => world.stop());
+  world.client.stop();
+  for (const key of ['diagnostic', 'list_devices']) {
+    const ack = await world.gladys.fake.action(key, {});
+    assert.equal(ack.success, false, key);
+    assert.match(ack.error.fr, /Pas connecté au cloud DiO/);
+  }
+});
+
+test('one press seen twice in two shapes rings once; a motion does not replay an old ring', async (t) => {
+  const world = await createWorld({ timing: { ringPulseMs: 10 } });
+  t.after(() => world.stop());
+  const fake = world.gladys.fake;
+  const ring = featureId('doorbell', SONNETTE, 'ring');
+  const ones = () =>
+    fake.states.filter((s) => s.device_feature_external_id === ring && s.state === 1).length;
+  const at = Date.now() - 1000;
+  world.dio.pushState(SONNETTE, [{ rt: 'gw.r.lastEvent', type: 'doorbell', ts: at }]);
+  await until(() => ones() === 1, { label: 'ring' });
+  await until(() => fake.lastState(ring) === 0, { label: 'end of the pulse' });
+  // The same press, read back as an ISO date of type "ring".
+  world.dio.pushState(SONNETTE, [
+    { rt: 'gw.r.lastEvent', type: 'ring', ts: new Date(at + 300).toISOString() },
+  ]);
+  world.dio.pushState(SONNETTE, [{ rt: 'gw.r.lastEvent', type: 'motion', ts: Date.now() }]);
+  world.dio.pushState(SONNETTE, [
+    { rt: 'gw.r.lastEvent', type: 'ring', ts: new Date(at).toISOString() },
+  ]);
+  await new Promise((resolve) => setTimeout(resolve, 60));
+  assert.equal(ones(), 1);
+  // "call_end" is not a ring.
+  world.dio.pushState(SONNETTE, [{ rt: 'gw.r.lastEvent', type: 'call_end', ts: Date.now() }]);
+  await new Promise((resolve) => setTimeout(resolve, 40));
+  assert.equal(ones(), 1);
+});
+
+test('a time without zone rings only when pushed live, never from a read', async (t) => {
+  const world = await createWorld({ timing: { ringPulseMs: 10 } });
+  t.after(() => world.stop());
+  const fake = world.gladys.fake;
+  const ring = featureId('doorbell', SONNETTE, 'ring');
+  const ones = () =>
+    fake.states.filter((s) => s.device_feature_external_id === ring && s.state === 1).length;
+  const zoneless = (ms) => new Date(ms).toISOString().slice(0, 19);
+  world.dio.states[SONNETTE].links[2] = {
+    rt: 'gw.r.lastEvent',
+    type: 'ring',
+    ts: zoneless(Date.now()),
+  };
+  await world.app.refresh();
+  assert.equal(ones(), 0);
+  // The same event pushed afterwards rings.
+  world.dio.pushState(SONNETTE, [world.dio.states[SONNETTE].links[2]]);
+  await until(() => ones() === 1, { label: 'live ring' });
+});
