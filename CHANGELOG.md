@@ -10,6 +10,8 @@ the notes of the version's GitHub Release.
 
 ## [Unreleased]
 
+## [1.1.0] - 2026-11-17
+
 ### Added
 
 - A read-only **Diagnostic** button: the raw state of each device and the last
@@ -59,5 +61,6 @@ the notes of the version's GitHub Release.
   travels when needed, and a refused password is never retried in a loop.
 - English, French, German and Spanish everywhere, documentation included.
 
-[Unreleased]: https://github.com/guim31/gladys-chacon-dio/compare/v1.0.1...HEAD
+[Unreleased]: https://github.com/guim31/gladys-chacon-dio/compare/v1.1.0...HEAD
+[1.1.0]: https://github.com/guim31/gladys-chacon-dio/compare/v1.0.1...v1.1.0
 [1.0.1]: https://github.com/guim31/gladys-chacon-dio/releases/tag/v1.0.1
